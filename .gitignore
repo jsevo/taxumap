@@ -1,7 +1,7 @@
 # folders/files tagged as 'private' won't be tracked
-*private*
-jonas_notebooks/
-compositional_data_demos/
+*local*
+data/*
+results/*
 *DS_Store*
 
 # Byte-compiled / optimized / DLL files
@@ -94,33 +94,11 @@ ENV/
 # Rope project settings
 .ropeproject
 .DS_Store
-mtsa/.DS_Store
-jonas_notebooks_home
 *DS_Store*
-compositional_data_demos/*.jpg
-compositional_data_demos/*.png
-.Rproj.user
-*jonas_R_notebooks"
-*papers/
-msta/jonas_R_notebooks/
-msta/jonas_R_notebooks/*.png
-msta/jonas_R_notebooks/*.jpg
-mtsa/papers/
-*/notebooks_phenotype/output/*
 *.csv
 *.png
 *.pdf
 *.ai
 *.jpeg
 *.jpg
-*.RData
-*.Rhistory
 *.DS_Store
-*.html
-*.Rmd
-*.RProj.user
-*.RProj
-mtsa/notebooks_phenotype/wbc/results/*
-mtsa/notebooks_phenotype/wbc/figures/*
-mtsa/notebooks_phenotype/figures/*
-mtsa/notebooks_phenotype/unleashed\ microbiome/results/*
