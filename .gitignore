@@ -1,9 +1,6 @@
 # folders/files tagged as 'private' won't be tracked
 *local*
-#data/*.csv
-#phylo-umap/results/*.png
-#phylo-umap/results/*.pdf
-*DS_Store*
+DS_Store*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
