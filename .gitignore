@@ -1,7 +1,8 @@
 # folders/files tagged as 'private' won't be tracked
 *local*
-data/*
-results/*
+data/*.csv
+results/*.png
+results/*.pdf
 *DS_Store*
 
 # Byte-compiled / optimized / DLL files
