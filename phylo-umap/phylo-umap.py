@@ -8,7 +8,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 def _fill_taxonomy_table(tax):
     """
-    Helper function that fills nan's in a taxonomy table. Such gaps are filled 'from the left' with the next higher non-nan taxonomy level.
+    Helper function that fills nan's in a taxonomy table. Such gaps are filled 'from the left' with the next higher non-nan taxonomy level and the lowest level (e.g. OTU# or ASV#) appended.
     """
     taxlevels = list(tax.columns[1::])
     root_level = tax.columns[0]
@@ -19,6 +19,10 @@ def _fill_taxonomy_table(tax):
             'unknown_%s_of_' % level + str(x)
             for x in tax.loc[_missing_l][taxlevels[i - 1]]
         ]
+    for i, (ix, c) in enumerate(tax.iteritems()):
+        tax.loc[ix, c] = tax[c].astype(str)+'____'+tax[taxlevels[-1]].astype(str)
+    tax = tax.applymap(lambda v: v if 'unknown' in v else v.split('____')[0])
+
     return (tax)
 
 
