@@ -5,7 +5,7 @@
 
 First, clone this repository. Install it. Copy the data to the expected location. Run.
 ## 
-    git clone jsevo/phylo-umap
+    git clone https://github.com/jsevo/phylo-umap.git
     cd phylo-umap
     pip install -e .
     cd phylo-umap
