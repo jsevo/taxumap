@@ -328,13 +328,14 @@ def phylo_umap(fpx='data/microbiota_table.csv',
 if __name__ == "__main__":
     import sys, getopt
     argv = sys.argv[1:]
+    print(argv)
     try:
         opts, args = getopt.getopt(
             argv, "hp:s:", ["print_figure=", "with_diversity_background="])
     except getopt.GetoptError:
         sys.exit(2)
 
-    print_figure = False
+    print_figure = True
     with_diversity_background = False
 
     for opt, arg in opts:
