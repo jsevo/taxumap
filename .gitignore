@@ -103,3 +103,4 @@ ENV/
 *.jpeg
 *.jpg
 *.DS_Store
+.Rproj.user
