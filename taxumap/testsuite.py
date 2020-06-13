@@ -26,17 +26,20 @@ class TestFillTaxonomyTable(unittest.TestCase):
                 ["Bacteria", "Firmicutes", "SomeClass", "SomeOrder"],
                 ["Bacteria", np.nan, "SomeClass2", "SomeOrder2"],
                 ["Bacteria", "Bacteroides", "SomeClass3", np.nan],
+                [np.nan, "Bacteroides", "SomeClass3", np.nan],
 
             ],
             columns=["Kingdom", "Phylum", "Class", "Order"],
-            index=["ASV1", "ASV2", "ASV3", "ASV4"],
+            index=["ASV1", "ASV2", "ASV3", "ASV4","ASV5"],
         )
         filled_taxtable = fill_taxonomy_table(taxtable)
         x1 = filled_taxtable.loc["ASV1"]["Class"]
         x2 = filled_taxtable.loc["ASV1"]["Order"]
         x3 = filled_taxtable.loc["ASV2"]["Class"]
         x4 = filled_taxtable.loc["ASV3"]["Phylum"]
-
+        x5 = filled_taxtable.loc["ASV4"]["Order"]
+        x6 = filled_taxtable.loc["ASV5"]["Kingdom"]
+        x7 = filled_taxtable.loc["ASV5"]["Order"]
         self.assertEqual(x1,
                          "Phylum_Firmicutes_of_unknown_Class____ASV1")
         self.assertEqual(x2,
@@ -45,6 +48,15 @@ class TestFillTaxonomyTable(unittest.TestCase):
                          "SomeClass")
         self.assertEqual(x4,
                          "Kingdom_Bacteria_of_unknown_Phylum____ASV3")
+        self.assertEqual(x5, "Class_SomeClass3_of_unknown_Order____ASV4")
+        # a stupid scenario
+        self.assertEqual(x6,
+                         "unknown_Kingdom____ASV5")
+
+        self.assertEqual(x7,
+                         "Kingdom_unknown_Kingdom_of_unknown_Order____ASV5")
+
+
 
 
 

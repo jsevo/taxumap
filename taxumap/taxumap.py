@@ -56,7 +56,7 @@ def fill_taxonomy_table(tax):
     tax_mask = tax.applymap(lambda v:"unknown" in v)
     tax_fill = tax.copy()
     tax_fill[tax_mask] = np.nan
-    #lookup table (one shifted, e.g. tbl["Class"] == "Phylum")
+    #lookup table for shifted tax level, e.g. "Class" -> "Phylum")
     taxlevelshifted = pd.Series(taxlevels[:-1], index=taxlevels[1::])
     taxlevelshifted.loc["Kingdom"] = "Kingdom"
     #series with the higher level per ASV/OTU found
@@ -74,6 +74,9 @@ def fill_taxonomy_table(tax):
     tax_fill[~tax_mask] = ''
     #pre pend the missing taxlevel to the tax table where tax table is missing 
     tax = tax_fill + tax
+
+    # if Kingdom was missing:
+    tax.loc[tax.Kingdom.str.contains("unknown"), "Kingdom"] = "unknown_Kingdom" 
 
     # append the unique sequence id from the index (e.g. ASV_X) to filled values so as to avoid aggregating on filled values.
     for ix, r in tax.iterrows():
