@@ -39,6 +39,7 @@ def _legacy_fill_taxonomy_table(tax):
 def fill_taxonomy_table(tax):
     """
     Helper function that fills nan's in a taxonomy table. Such gaps are filled 'from the left' with the next higher non-nan taxonomy level and the lowest level (e.g. OTU# or ASV#) appended.
+    TODO make less ugly
     """
     taxlevels = list(tax.columns[0::])
     root_level = tax.columns[0]
@@ -46,25 +47,22 @@ def fill_taxonomy_table(tax):
     if 'kingdom' not in root_level.lower():
         print("the highest taxonomic level found is %s, not kingdom as expected. beware"%root_level)
     tax[root_level] = tax[root_level].fillna('unknown_%s' % root_level)
-
     for i, level in enumerate(taxlevels[1::]):
         print(level)
-        #phylum
         #indexes of rows where level is missing
         _missing_l = tax[level].isna()
         # fill with next higher level
         tax.loc[_missing_l, level] = "unknown_%s"%level 
-        # fill_missing_with = [
-        #     'unknown_%s_of_' % level + str(x)
-        #     for x in tax.loc[_missing_l][taxlevels[i - 1]]
-        # ]
     tax_mask = tax.applymap(lambda v:"unknown" in v)
     tax_fill = tax.copy()
     tax_fill[tax_mask] = np.nan
+    #lookup table (one shifted, e.g. tbl["Class"] == "Phylum")
+    taxlevelshifted = pd.Series(taxlevels[:-1], index=taxlevels[1::])
+    taxlevelshifted.loc["Kingdom"] = "Kingdom"
+    #series with the higher level per ASV/OTU found
     _highest_level = ( tax_fill.isna() ).idxmax(axis=1)
-    taxlevelseries = pd.Series(taxlevels[:-1], index=taxlevels[1::])
-    taxlevelseries.loc["Kingdom"] = "Kingdom"
-    _highest_level = _highest_level.apply(lambda v: taxlevelseries.loc[ v ] )
+    _highest_level = _highest_level.apply(lambda v: taxlevelshifted.loc[ v ] )
+    # convert taxfill into empty string data frame except where tax is missing a level
     for cn, c in tax_fill.iteritems():
         tax_fill[cn]  = tax_fill[cn].fillna(_highest_level)
     tax_fill[~tax_mask] = ''
@@ -72,10 +70,12 @@ def fill_taxonomy_table(tax):
         whatsit = r.apply(lambda v: '' if v=='' else '_'+tax.loc[ix, v])
         tax_fill.loc[ix] += whatsit 
     tax_fill += "_of_"
+    # empty strings where tax is not missing values 
     tax_fill[~tax_mask] = ''
+    #pre pend the missing taxlevel to the tax table where tax table is missing 
     tax = tax_fill + tax
 
-    # append the index (e.g. ASV_X) to filled values so as to avoid aggregating on filled values.
+    # append the unique sequence id from the index (e.g. ASV_X) to filled values so as to avoid aggregating on filled values.
     for ix, r in tax.iterrows():
         for c, v in r.items():
             if "unknown" in v:
