@@ -1,3 +1,8 @@
+# Authors: Jonas Schluter <jonas.schluter@nyulangone.org>
+# License: BSD 3 clause
+__author__ = "Jonas Schluter"
+__copyright__ = "Copyright 2020, MIT License"
+
 #!/usr/bin/env python
 import sys
 import numpy as np
@@ -7,29 +12,78 @@ import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
 
 
-def _fill_taxonomy_table(tax):
+def _legacy_fill_taxonomy_table(tax):
     """
     Helper function that fills nan's in a taxonomy table. Such gaps are filled 'from the left' with the next higher non-nan taxonomy level and the lowest level (e.g. OTU# or ASV#) appended.
     """
     taxlevels = list(tax.columns[1::])
     root_level = tax.columns[0]
+    # root level: should be Kingdom
+    if 'kingdom' not in root_level.lower():
+        print("the highest taxonomic level found is %s, not kingdom as expected. beware"%root_level)
     tax[root_level] = tax[root_level].fillna('unknown_%s' % root_level)
+
     for i, level in enumerate(taxlevels):
         _missing_l = tax[level].isna()
         tax.loc[_missing_l, level] = [
             'unknown_%s_of_' % level + str(x)
             for x in tax.loc[_missing_l][taxlevels[i - 1]]
         ]
-    for i, (ix, c) in enumerate(tax.iteritems()):
-        tax.loc[
-            ix,
-            c] = tax[c].astype(str) + '____' + tax[taxlevels[-1]].astype(str)
-    tax = tax.applymap(lambda v: v if 'unknown' in v else v.split('____')[0])
+    # append the index (e.g. ASV_X) to filled values so as to avoid aggregating on filled values. 
+    for ix, r in tax.iterrows():
+        for c, v in r.items():
+            if "unknown" in v:
+                tax.loc[ix, c] = v+'____'+str(ix) 
+    return (tax)
 
+def fill_taxonomy_table(tax):
+    """
+    Helper function that fills nan's in a taxonomy table. Such gaps are filled 'from the left' with the next higher non-nan taxonomy level and the lowest level (e.g. OTU# or ASV#) appended.
+    """
+    taxlevels = list(tax.columns[0::])
+    root_level = tax.columns[0]
+    # root level: should be Kingdom
+    if 'kingdom' not in root_level.lower():
+        print("the highest taxonomic level found is %s, not kingdom as expected. beware"%root_level)
+    tax[root_level] = tax[root_level].fillna('unknown_%s' % root_level)
+
+    for i, level in enumerate(taxlevels[1::]):
+        print(level)
+        #phylum
+        #indexes of rows where level is missing
+        _missing_l = tax[level].isna()
+        # fill with next higher level
+        tax.loc[_missing_l, level] = "unknown_%s"%level 
+        # fill_missing_with = [
+        #     'unknown_%s_of_' % level + str(x)
+        #     for x in tax.loc[_missing_l][taxlevels[i - 1]]
+        # ]
+    tax_mask = tax.applymap(lambda v:"unknown" in v)
+    tax_fill = tax.copy()
+    tax_fill[tax_mask] = np.nan
+    _highest_level = ( tax_fill.isna() ).idxmax(axis=1)
+    taxlevelseries = pd.Series(taxlevels[:-1], index=taxlevels[1::])
+    taxlevelseries.loc["Kingdom"] = "Kingdom"
+    _highest_level = _highest_level.apply(lambda v: taxlevelseries.loc[ v ] )
+    for cn, c in tax_fill.iteritems():
+        tax_fill[cn]  = tax_fill[cn].fillna(_highest_level)
+    tax_fill[~tax_mask] = ''
+    for ix, r in tax_fill.iterrows():
+        whatsit = r.apply(lambda v: '' if v=='' else '_'+tax.loc[ix, v])
+        tax_fill.loc[ix] += whatsit 
+    tax_fill += "_of_"
+    tax_fill[~tax_mask] = ''
+    tax = tax_fill + tax
+
+    # append the index (e.g. ASV_X) to filled values so as to avoid aggregating on filled values.
+    for ix, r in tax.iterrows():
+        for c, v in r.items():
+            if "unknown" in v:
+                tax.loc[ix, c] = v+'____'+str(ix) 
     return (tax)
 
 
-def _aggregate_at_taxlevel(X, tax, level):
+def aggregate_at_taxlevel(X, tax, level):
     """Helper function. For a given taxonomic level, aggregate relative abundances by summing all members of corresponding taxon."""
     _X_agg = X.copy()
     _X_agg.columns = [tax.loc[x][level] for x in _X_agg.columns]
@@ -37,16 +91,28 @@ def _aggregate_at_taxlevel(X, tax, level):
     return (_X_agg)
 
 
-def _scale(X, scaler=MinMaxScaler()):
-    """Min max scaling of relative abundances to ensure that different taxonomic levels have comparable dynamic ranges."""
+def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level = 0):
+    """Min max scaling of relative abundances to ensure that different taxonomic levels have comparable dynamic ranges.
+    Params
+    ===============
+    X: ASV table
+    scaler: one of the sklearn.preprocessing scalers, defaults to MinMaxScaler 
+
+    Returns
+    ===============
+    Xscaled: scaled ASV table
+    """
     scaler = MinMaxScaler()
     X_sum = X.sum()
-    X_stats = X.apply(['mean', 'median', 'max']).T
-    X_consider = X_stats.applymap(lambda v: v > 0.001).apply(np.any, axis=1)
-    X_consider = X_consider[X_consider.values].index
-
-    X_scaled = scaler.fit_transform(X[X_consider])
-    return (X_scaled)
+    X_stats = X.apply(['max']).T
+    if remove_rare_asv_level>0:
+        # if an ASV has never reached at least `remove_rare_asv_level` threshold, ignore.
+        X_consider = X_stats.applymap(lambda v: v > remove_rare_asv_level).apply(np.any, axis=1)
+        X_consider = X_consider[X_consider.values].index
+    else:
+        X_consider = X
+    Xscaled = scaler.fit_transform(X[X_consider])
+    return (Xscaled)
 
 
 def parse_microbiome_data(fp, idx_col='index_column'):
@@ -101,12 +167,18 @@ def parse_taxonomy_data(fp):
             print(
                 "Reading taxonomy table. Assuming columns are ordered by phylogeny with in descending order of hierarchy."
             )
-            tax = tax.set_index(tax.columns[-1])
+            _low = tax.columns[-1]
+            try:
+                assert _low.lower() in ["asv","otu"], "%s not in ['ASV', 'OTU'], moving on"
+            except AssertionError as ae:
+                print(ae)
+            print("Setting %s as index, THIS ASSUMES %s IS THE LOWEST TAXONOMIC LEVEL"%(_low, _low))
+            tax = tax.set_index(_low)
             if np.any(tax.isna()):
                 warnings.warn(
                     "Missing values (NaN) found for some taxonomy levels, filling with higher taxonomic level names"
                 )
-                tax = _fill_taxonomy_table(tax)
+                tax = fill_taxonomy_table(tax)
             return (tax)
         except ValueError as ve:
             print("{0}".format(ve))
@@ -186,44 +258,46 @@ def taxonomic_aggregation(X,
     X : Expanded microbiota table.
 
     """
+    assert ( type(agg_levels)==list ) | ( agg_levels == None ), "Aborting: agg_levels should be a list of taxonomic levels or explicitly `None`"
     import numpy as np
     if agg_levels == None:
         try:
             assert len(
                 tax.columns
             ) > 3, "the taxonomy table has very few columns. Cannot aggregate taxonomic levels. Reverting to regular UMAP"
-            agg_levels = np.array(tax.columns)[[2, -2]]
+            agg_levels = np.array(tax.columns)[[1, -2]]
             print(agg_levels)
             if agg_levels[0] == agg_levels[1]:
                 # in case the taxonomy table is weird and has few columns
                 agg_levels = agg_levels[0]
-            _X = X.copy()
-            if distanceperlevel:
-                Xdist = ssd.cdist(_X, _X)
-                Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
-                for l in agg_levels:
-                    print("aggregating on %s" % l)
-                    Xagg = _aggregate_at_taxlevel(_X, tax, l)
-                    if distanceperlevel:
-                        Xagg = ssd.cdist(Xagg, Xagg, distancemetric)
-                        Xagg = pd.DataFrame(Xagg,
-                                            index=_X.index,
-                                            columns=_X.index)
-                        Xdist = Xdist + Xagg
-                X = Xdist
-            else:
-                for l in agg_levels:
-                    print("aggregating on %s" % l)
-                    Xagg = _aggregate_at_taxlevel(_X, tax, l)
-                    X = X.join(Xagg, lsuffix="_r")
-                assert np.allclose(
-                    _X.sum(axis=1),
-                    X.sum(axis=1) / (len(agg_levels) + 1)
-                ), "During aggregation, the sum of relative abundances is not equal to %d-times the original relative abundances. This would have been expected due to aggregating and joining" % (
-                    (len(agg_levels) + 1))
-            return (X)
         except AssertionError as ae:
             print("{0}".format(ae))
+
+    _X = X.copy()
+    if distanceperlevel:
+        Xdist = ssd.cdist(_X, _X)
+        Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
+        for l in agg_levels:
+            print("aggregating on %s" % l)
+            Xagg = aggregate_at_taxlevel(_X, tax, l)
+            if distanceperlevel:
+                Xagg = ssd.cdist(Xagg, Xagg, distancemetric)
+                Xagg = pd.DataFrame(Xagg,
+                                    index=_X.index,
+                                    columns=_X.index)
+                Xdist = Xdist + Xagg
+        X = Xdist
+    else:
+        for l in agg_levels:
+            print("aggregating on %s" % l)
+            Xagg = aggregate_at_taxlevel(_X, tax, l)
+            X = X.join(Xagg, lsuffix="_r")
+        assert np.allclose(
+            _X.sum(axis=1),
+            X.sum(axis=1) / (len(agg_levels) + 1)
+        ), "During aggregation, the sum of relative abundances is not equal to %d-times the original relative abundances. This would have been expected due to aggregating and joining" % (
+            (len(agg_levels) + 1))
+    return (X)
 
 
 def pretty_print(X,
@@ -403,6 +477,9 @@ def taxumap(agg_levels,
                distancemetric,
                print_figure,
                print_with_diversity,
+               X=None,
+               tax=None,
+               asv_colors=None,
                loadembedding=False,
                withusercolors=False,
                bgcolor='white',
@@ -447,14 +524,17 @@ def taxumap(agg_levels,
     X_embedded : pandas.DataFrame of 2-D coordinates with indeces from the microbiota_table.l
 
     """
-    X = parse_microbiome_data(fpx)
+    if X is None:
+        X = parse_microbiome_data(fpx)
     # _cols = X.sum(axis=0).sort_values().tail(100).index
     # X = X[_cols]
-    tax = parse_taxonomy_data(fpt)
-    if withusercolors:
-        asv_colors = parse_asvcolor_data(fpc)
-    else:
-        asv_colors = None
+    if tax is None:
+        tax = parse_taxonomy_data(fpt)
+    if asv_colors==None:
+        if withusercolors:
+            asv_colors = parse_asvcolor_data(fpc)
+        else:
+            asv_colors = None
     # aggregate taxonomic levels
     Xagg = taxonomic_aggregation(X,
                                     tax,
@@ -463,13 +543,13 @@ def taxumap(agg_levels,
 
     # scale
     if withscaling:
-        X_scaled = _scale(Xagg)
+        Xscaled = scale(Xagg)
     else:
         print('not scaling')
-        X_scaled = Xagg
+        Xscaled = Xagg
 
     from umap import UMAP
-    # neigh = 5 if int(X_scaled.shape[0] / 100) < 5 else int(X_scaled.shape[0] /
+    # neigh = 5 if int(Xscaled.shape[0] / 100) < 5 else int(Xscaled.shape[0] /
     #                                                        100)
     neigh = 120
     min_dist = 0.2
@@ -483,18 +563,18 @@ def taxumap(agg_levels,
         if withscaling:
             taxumap = UMAP(n_neighbors=neigh,
                             min_dist=min_dist,
-                            metric='manhattan').fit(X_scaled)
+                            metric='manhattan').fit(Xscaled)
 
         elif distanceperlevel:
             taxumap = UMAP(n_neighbors=neigh,
                             min_dist=min_dist,
-                            metric='precomputed').fit(X_scaled)
+                            metric='precomputed').fit(Xscaled)
         else:
             taxumap = UMAP(n_neighbors=neigh,
                             min_dist=min_dist,
-                            metric=distancemetric).fit(X_scaled)
+                            metric=distancemetric).fit(Xscaled)
 
-        embedding = taxumap.transform(X_scaled)
+        embedding = taxumap.transform(Xscaled)
         X_embedded = pd.DataFrame(embedding,
                                 index=X.index,
                                 columns=['phyUMAP-1', 'phyUMAP-2'])
