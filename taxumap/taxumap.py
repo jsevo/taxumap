@@ -85,27 +85,40 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
     return Xscaled
 
 
-def parse_microbiome_data(fp, idx_col="index_column"):
-    """Load the microbiota data."""
+def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
+    """Load the microbiota data"""
 
     from pathlib import Path
 
     fp = Path(fp)
+
+    # There's probably a better way of doing this test -
+    # fp.resolve(strict=True) will error if file does not exist?
     try:
         f = fp.resolve(strict=True)
+
     except FileNotFoundError as fe:
         print("{0}".format(fe))
         print(
-            "The microbiota composition table should be located in the data/ subfolder and named microbiota_table.csv"
+            "The microbiota composition table should be located in the data/subfolder and named microbiota_table.csv"
         )
         sys.exit(2)
+
+    # Why can't the above statement just be folded into this?
     if fp.is_file():
         try:
-            X = pd.read_csv(fp, index_col=idx_col,)
+
+            # This must be implemented in a two-liner to make sure dtype
+            # of index is str
+            X = pd.read_csv(fp, dtype={idx_col: idx_dtype})
+            X.set_index(idx_col, inplace=True)
             X = X.astype(np.float64)
+
             if not np.allclose(X.sum(axis=1), 1):
                 warnings.warn("rows do not sum to 1. Is this intentional?")
+
             return X.fillna(0)
+
         except ValueError as ve:
             print("{0}".format(ve))
             print(
