@@ -514,6 +514,8 @@ def taxumap(
     fpx="data/microbiota_table.csv",
     fpt="data/taxonomy.csv",
     fpc="data/asvcolors.csv",
+    transform_seed=None,
+    debug=False,
 ):
     """
     taxumap embedding of microbiota composition data. Data is expected to be compositional, i.e. each row sums to 1. Two tables are required: the microbiota data and a taxonomy table.
@@ -602,6 +604,10 @@ def taxumap(
             ).fit(Xscaled)
 
         embedding = taxumap.transform(Xscaled)
+
+        if transform_seed is not None:
+            taxumap.transform_seed = transform_seed
+
         X_embedded = pd.DataFrame(
             embedding, index=X.index, columns=["phyUMAP-1", "phyUMAP-2"]
         )
@@ -625,7 +631,10 @@ def taxumap(
             bgcolor=bgcolor,
         )
 
-    return (taxumap, X_embedded, X_scaled)
+    if debug:
+        return (taxumap, X_embedded, Xscaled, X)
+    else:
+        return (taxumap, X_embedded)
 
 
 if __name__ == "__main__":
