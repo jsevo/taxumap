@@ -184,7 +184,7 @@ def parse_taxonomy_data(fp):
                 tax = fill_taxonomy_table(tax)
 
             return tax
-            
+
         except ValueError as ve:
             print("{0}".format(ve))
             # print(
@@ -200,7 +200,6 @@ def parse_taxonomy_data(fp):
 
 def parse_asvcolor_data(fp):
     """Load the taxonomy data."""
-    from pathlib import Path
 
     if type(fp) is str:
 
