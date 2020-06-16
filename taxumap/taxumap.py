@@ -10,6 +10,61 @@ import pandas as pd
 import warnings
 import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
+try:
+    # Ideally should have these installed
+    from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
+except:
+    # fall back  on local def
+    def fill_taxonomy_table(tax):
+        """
+        Helper function that fills nan's in a taxonomy table. Such gaps are filled 'from the left' with the next higher non-nan taxonomy level and the lowest level (e.g. OTU# or ASV#) appended.
+        TODO make less ugly
+        """
+        taxlevels = list(tax.columns[0::])
+        root_level = tax.columns[0]
+        # root level: should be Kingdom
+        if 'kingdom' not in root_level.lower():
+            print("the highest taxonomic level found is %s, not kingdom as expected. beware"%root_level)
+        tax[root_level] = tax[root_level].fillna('unknown_%s' % root_level)
+        for i, level in enumerate(taxlevels[1::]):
+            print(level)
+            #indexes of rows where level is missing
+            _missing_l = tax[level].isna()
+            # fill with next higher level
+            tax.loc[_missing_l, level] = "unknown_%s"%level 
+        tax_mask = tax.applymap(lambda v:"unknown" in v)
+        tax_fill = tax.copy()
+        tax_fill[tax_mask] = np.nan
+        #lookup table for shifted tax level, e.g. "Class" -> "Phylum")
+        taxlevelshifted = pd.Series(taxlevels[:-1], index=taxlevels[1::])
+        taxlevelshifted.loc["Kingdom"] = "Kingdom"
+        #series with the higher level per ASV/OTU found
+        _highest_level = ( tax_fill.isna() ).idxmax(axis=1)
+        _highest_level = _highest_level.apply(lambda v: taxlevelshifted.loc[ v ] )
+        # convert taxfill into empty string data frame except where tax is missing a level
+        for cn, c in tax_fill.iteritems():
+            tax_fill[cn]  = tax_fill[cn].fillna(_highest_level)
+        tax_fill[~tax_mask] = ''
+        for ix, r in tax_fill.iterrows():
+            whatsit = r.apply(lambda v: '' if v=='' else '_'+tax.loc[ix, v])
+            tax_fill.loc[ix] += whatsit 
+        tax_fill += "_of_"
+        # empty strings where tax is not missing values 
+        tax_fill[~tax_mask] = ''
+        #pre pend the missing taxlevel to the tax table where tax table is missing 
+        tax = tax_fill + tax
+
+        # if Kingdom was missing:
+        tax.loc[tax.Kingdom.str.contains("unknown"), "Kingdom"] = "unknown_Kingdom" 
+
+        # append the unique sequence id from the index (e.g. ASV_X) to filled values so as to avoid aggregating on filled values.
+        for ix, r in tax.iterrows():
+            for c, v in r.items():
+                if "unknown" in v:
+                    tax.loc[ix, c] = v+'____'+str(ix) 
+        return (tax)
+
+
 
 
 def _legacy_fill_taxonomy_table(tax):
@@ -35,56 +90,6 @@ def _legacy_fill_taxonomy_table(tax):
             if "unknown" in v:
                 tax.loc[ix, c] = v+'____'+str(ix) 
     return (tax)
-
-def fill_taxonomy_table(tax):
-    """
-    Helper function that fills nan's in a taxonomy table. Such gaps are filled 'from the left' with the next higher non-nan taxonomy level and the lowest level (e.g. OTU# or ASV#) appended.
-    TODO make less ugly
-    """
-    taxlevels = list(tax.columns[0::])
-    root_level = tax.columns[0]
-    # root level: should be Kingdom
-    if 'kingdom' not in root_level.lower():
-        print("the highest taxonomic level found is %s, not kingdom as expected. beware"%root_level)
-    tax[root_level] = tax[root_level].fillna('unknown_%s' % root_level)
-    for i, level in enumerate(taxlevels[1::]):
-        print(level)
-        #indexes of rows where level is missing
-        _missing_l = tax[level].isna()
-        # fill with next higher level
-        tax.loc[_missing_l, level] = "unknown_%s"%level 
-    tax_mask = tax.applymap(lambda v:"unknown" in v)
-    tax_fill = tax.copy()
-    tax_fill[tax_mask] = np.nan
-    #lookup table for shifted tax level, e.g. "Class" -> "Phylum")
-    taxlevelshifted = pd.Series(taxlevels[:-1], index=taxlevels[1::])
-    taxlevelshifted.loc["Kingdom"] = "Kingdom"
-    #series with the higher level per ASV/OTU found
-    _highest_level = ( tax_fill.isna() ).idxmax(axis=1)
-    _highest_level = _highest_level.apply(lambda v: taxlevelshifted.loc[ v ] )
-    # convert taxfill into empty string data frame except where tax is missing a level
-    for cn, c in tax_fill.iteritems():
-        tax_fill[cn]  = tax_fill[cn].fillna(_highest_level)
-    tax_fill[~tax_mask] = ''
-    for ix, r in tax_fill.iterrows():
-        whatsit = r.apply(lambda v: '' if v=='' else '_'+tax.loc[ix, v])
-        tax_fill.loc[ix] += whatsit 
-    tax_fill += "_of_"
-    # empty strings where tax is not missing values 
-    tax_fill[~tax_mask] = ''
-    #pre pend the missing taxlevel to the tax table where tax table is missing 
-    tax = tax_fill + tax
-
-    # if Kingdom was missing:
-    tax.loc[tax.Kingdom.str.contains("unknown"), "Kingdom"] = "unknown_Kingdom" 
-
-    # append the unique sequence id from the index (e.g. ASV_X) to filled values so as to avoid aggregating on filled values.
-    for ix, r in tax.iterrows():
-        for c, v in r.items():
-            if "unknown" in v:
-                tax.loc[ix, c] = v+'____'+str(ix) 
-    return (tax)
-
 
 def aggregate_at_taxlevel(X, tax, level):
     """Helper function. For a given taxonomic level, aggregate relative abundances by summing all members of corresponding taxon."""
@@ -197,44 +202,49 @@ def parse_taxonomy_data(fp):
 def parse_asvcolor_data(fp):
     """Load the taxonomy data."""
     from pathlib import Path
-    fp = Path(fp)
-    try:
-        f = fp.resolve(strict=True)
-    except FileNotFoundError as fe:
-        print("{0}".format(fe))
-        print(
-            "The color per ASV table should be located in the data/ subfolder and named asvcolors.csv"
-        )
-        sys.exit(2)
-    if f.is_file():
+    if type(fp) is str:
+
+        fp = Path(fp)
         try:
-            taxcolors = pd.read_csv(fp)
+            f = fp.resolve(strict=True)
+        except FileNotFoundError as fe:
+            print("{0}".format(fe))
             print(
-                "Reading color per ASV table."
+                "The color per ASV table should be located in the data/ subfolder and named asvcolors.csv"
             )
+            sys.exit(2)
+        if f.is_file():
             try:
-                assert taxcolors.columns[[0,1]].to_list()== ["ASV", "HexColor"]
-            except AssertionError:
-                print( 'Column names should be:  ["ASV", "HexColor"]. Choosing colors automatically.')
-                return()
-
-            taxcolors = taxcolors.set_index('ASV')
-            if np.any(taxcolors.isna()):
-                warnings.warn(
-                    "Missing values (NaN) found for some taxcolors. Filling with 'grey'"
+                taxcolors = pd.read_csv(fp)
+                print(
+                    "Reading color per ASV table."
                 )
-                taxcolors = taxcolors.fillna('grey')
-            return (taxcolors)
-        except ValueError as ve:
-            print("{0}".format(ve))
-            print(
-                "Please make sure the taxcolors has columns labeled ['ASV','HexColor'], and contain as values the ASV labels as strings and valid hex color stings"
-            )
-        except:
-            print(
-                "Please make sure the taxcolors has columns labeled ['ASV','HexColor'], and contain as values the ASV labels as strings and valid hex color stings"
-            )
+                try:
+                    assert taxcolors.columns[[0,1]].to_list()== ["ASV", "HexColor"]
+                except AssertionError:
+                    print( 'Column names should be:  ["ASV", "HexColor"]. Choosing colors automatically.')
+                    return()
 
+                taxcolors = taxcolors.set_index('ASV')
+                if np.any(taxcolors.isna()):
+                    warnings.warn(
+                        "Missing values (NaN) found for some taxcolors. Filling with 'grey'"
+                    )
+                    taxcolors = taxcolors.fillna('grey')
+                return (taxcolors)
+            except ValueError as ve:
+                print("{0}".format(ve))
+                print(
+                    "Please make sure the taxcolors has columns labeled ['ASV','HexColor'], and contain as values the ASV labels as strings and valid hex color stings"
+                )
+            except:
+                print(
+                    "Please make sure the taxcolors has columns labeled ['ASV','HexColor'], and contain as values the ASV labels as strings and valid hex color stings"
+                )
+    elif type(fp) is pd.DataFrame:
+        print("using provided taxcolors")
+        taxcolors = fp
+        return(taxcolors)
 
 def taxonomic_aggregation(X,
                              tax,
@@ -488,9 +498,7 @@ def taxumap(agg_levels,
                bgcolor='white',
                fpx='data/microbiota_table.csv',
                fpt='data/taxonomy.csv',
-               fpc='data/asvcolors.csv',
-               transform_seed=None,
-               debug=False):
+               fpc='data/asvcolors.csv'):
     """
     taxumap embedding of microbiota composition data. Data is expected to be compositional, i.e. each row sums to 1. Two tables are required: the microbiota data and a taxonomy table.
 
@@ -579,9 +587,6 @@ def taxumap(agg_levels,
                             min_dist=min_dist,
                             metric=distancemetric).fit(Xscaled)
 
-        if transform_seed is not None:
-            taxumap.transform_seed = transform_seed
-
         embedding = taxumap.transform(Xscaled)
         X_embedded = pd.DataFrame(embedding,
                                 index=X.index,
@@ -604,10 +609,7 @@ def taxumap(agg_levels,
                      usercolors = asv_colors,
                      bgcolor=bgcolor)
 
-    if debug:
-        return (taxumap, X_embedded, Xscaled, X)
-    else:
-        return (taxumap, X_embedded)
+    return (taxumap, X_embedded, X_scaled)
 
 
 if __name__ == "__main__":
