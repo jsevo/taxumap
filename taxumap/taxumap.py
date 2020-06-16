@@ -5,6 +5,7 @@ __copyright__ = "Copyright 2020, MIT License"
 
 #!/usr/bin/env python
 import sys
+import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -654,6 +655,13 @@ def taxumap(
         )
 
         if save_embedding:
+
+            if not os.path.isdir("results"):
+                print()
+                print("No results folder in current working directory.")
+                print("Will create one.")
+                os.mkdir("results")
+
             X_embedded.to_csv("results/embedded.csv")
 
     if print_figure:
