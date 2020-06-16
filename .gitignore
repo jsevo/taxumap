@@ -104,3 +104,6 @@ ENV/
 *.jpg
 *.DS_Store
 .Rproj.user
+
+# For VS Code settings
+.vscode

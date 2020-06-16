@@ -488,7 +488,9 @@ def taxumap(agg_levels,
                bgcolor='white',
                fpx='data/microbiota_table.csv',
                fpt='data/taxonomy.csv',
-               fpc='data/asvcolors.csv'):
+               fpc='data/asvcolors.csv',
+               transform_seed=None,
+               debug=False):
     """
     taxumap embedding of microbiota composition data. Data is expected to be compositional, i.e. each row sums to 1. Two tables are required: the microbiota data and a taxonomy table.
 
@@ -577,6 +579,9 @@ def taxumap(agg_levels,
                             min_dist=min_dist,
                             metric=distancemetric).fit(Xscaled)
 
+        if transform_seed is not None:
+            taxumap.transform_seed = transform_seed
+
         embedding = taxumap.transform(Xscaled)
         X_embedded = pd.DataFrame(embedding,
                                 index=X.index,
@@ -599,7 +604,10 @@ def taxumap(agg_levels,
                      usercolors = asv_colors,
                      bgcolor=bgcolor)
 
-    return (taxumap, X_embedded)
+    if debug:
+        return (taxumap, X_embedded, Xscaled, X)
+    else:
+        return (taxumap, X_embedded)
 
 
 if __name__ == "__main__":
