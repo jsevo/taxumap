@@ -200,6 +200,8 @@ def parse_taxonomy_data(fp):
 
 def parse_asvcolor_data(fp):
     """Load the taxonomy data."""
+    """Todo: This function only works rn with 'ASV' as the 
+             index. This should become a parameter"""
 
     if type(fp) is str:
 
