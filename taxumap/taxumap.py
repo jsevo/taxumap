@@ -67,9 +67,10 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
     ===============
     Xscaled: scaled ASV table
     """
-    scaler = MinMaxScaler()
+    # scaler = MinMaxScaler()
     X_sum = X.sum()
     X_stats = X.apply(["max"]).T
+
     if remove_rare_asv_level > 0:
         # if an ASV has never reached at least `remove_rare_asv_level` threshold, ignore.
         X_consider = X_stats.applymap(lambda v: v > remove_rare_asv_level).apply(
@@ -78,7 +79,9 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
         X_consider = X_consider[X_consider.values].index
     else:
         X_consider = X
+
     Xscaled = scaler.fit_transform(X[X_consider])
+
     return Xscaled
 
 
