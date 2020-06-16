@@ -17,38 +17,6 @@ try:
     # Ideally should have these installed
     from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
 
-except:
-    # fall back  on local def
-    from taxumap.tools import fill_taxonomy_table
-
-
-def _legacy_fill_taxonomy_table(tax):
-    """
-    Helper function that fills nan's in a taxonomy table. Such gaps are filled 'from the left' with the next higher non-nan taxonomy level and the lowest level (e.g. OTU# or ASV#) appended.
-    """
-    taxlevels = list(tax.columns[1::])
-    root_level = tax.columns[0]
-    # root level: should be Kingdom
-    if "kingdom" not in root_level.lower():
-        print(
-            "the highest taxonomic level found is %s, not kingdom as expected. beware"
-            % root_level
-        )
-    tax[root_level] = tax[root_level].fillna("unknown_%s" % root_level)
-
-    for i, level in enumerate(taxlevels):
-        _missing_l = tax[level].isna()
-        tax.loc[_missing_l, level] = [
-            "unknown_%s_of_" % level + str(x)
-            for x in tax.loc[_missing_l][taxlevels[i - 1]]
-        ]
-    # append the index (e.g. ASV_X) to filled values so as to avoid aggregating on filled values.
-    for ix, r in tax.iterrows():
-        for c, v in r.items():
-            if "unknown" in v:
-                tax.loc[ix, c] = v + "____" + str(ix)
-    return tax
-
 
 def aggregate_at_taxlevel(X, tax, level):
     """Helper function. For a given taxonomic level, aggregate relative abundances by summing all members of corresponding taxon."""
@@ -69,7 +37,6 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
     ===============
     Xscaled: scaled ASV table
     """
-    # scaler = MinMaxScaler()
     X_sum = X.sum()
     X_stats = X.apply(["max"]).T
 
