@@ -5,6 +5,7 @@ __copyright__ = "Copyright 2020, MIT License"
 
 #!/usr/bin/env python
 import sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import warnings
@@ -88,8 +89,6 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
 def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
     """Load the microbiota data"""
 
-    from pathlib import Path
-
     fp = Path(fp)
 
     # There's probably a better way of doing this test -
@@ -100,7 +99,7 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
     except FileNotFoundError as fe:
         print("{0}".format(fe))
         print(
-            "The microbiota composition table should be located in the data/subfolder and named microbiota_table.csv"
+            "The microbiota composition table should be located in the data/ subfolder and named microbiota_table.csv"
         )
         sys.exit(2)
 
@@ -132,47 +131,67 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
 
 def parse_taxonomy_data(fp):
     """Load the taxonomy data."""
-    from pathlib import Path
+    """Todo: Make it so this fxn takes 'idx_col' parameter instead of forcing
+             users to set the ASV/OTU col at the end"""
 
     fp = Path(fp)
+
     try:
+
         f = fp.resolve(strict=True)
+
     except FileNotFoundError as fe:
         print("{0}".format(fe))
         print(
             "The taxonomy table should be located in the data/ subfolder and named taxonomy.csv"
         )
+
         sys.exit(2)
+
     if f.is_file():
+
         try:
             tax = pd.read_csv(fp,)
+
             print(
                 "Reading taxonomy table. Assuming columns are ordered by phylogeny with in descending order of hierarchy."
             )
+            print("e.g. Kingdom, Phylum, ... , Genus, Species, etc")
+
+            print("Make sure that the OTU/ASV is the LAST COLUMN")
+
             _low = tax.columns[-1]
             try:
                 assert _low.lower() in [
                     "asv",
                     "otu",
                 ], "%s not in ['ASV', 'OTU'], moving on"
+
             except AssertionError as ae:
                 print(ae)
+
             print(
                 "Setting %s as index, THIS ASSUMES %s IS THE LOWEST TAXONOMIC LEVEL"
                 % (_low, _low)
             )
+
             tax = tax.set_index(_low)
             if np.any(tax.isna()):
                 warnings.warn(
                     "Missing values (NaN) found for some taxonomy levels, filling with higher taxonomic level names"
                 )
+
                 tax = fill_taxonomy_table(tax)
+
             return tax
+            
         except ValueError as ve:
             print("{0}".format(ve))
-            print(
-                "Please make sure the taxonomy has a column labeled 'index_column' which contains the sample IDs"
-            )
+            # print(
+            #     "Please make sure the taxonomy has a column labeled 'index_column' which contains the sample IDs"
+            # )
+            print("Error - please make sure that the OTU/ASV is the LAST COLUMN")
+
         except:
             print(
                 "An unknown error occurred during taxonomy table parsing. Please see the instructions for how to run taxumap."
