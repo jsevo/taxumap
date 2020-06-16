@@ -552,6 +552,7 @@ def taxumap(
     fpc="data/asvcolors.csv",
     transform_seed=None,
     debug=False,
+    save_embedding=False,
 ):
     """
     taxumap embedding of microbiota composition data. Data is expected to be compositional, i.e. each row sums to 1. Two tables are required: the microbiota data and a taxonomy table.
@@ -591,17 +592,21 @@ def taxumap(
     X_embedded : pandas.DataFrame of 2-D coordinates with indeces from the microbiota_table.l
 
     """
+
     if X is None:
         X = parse_microbiome_data(fpx)
+
     # _cols = X.sum(axis=0).sort_values().tail(100).index
     # X = X[_cols]
     if tax is None:
         tax = parse_taxonomy_data(fpt)
+
     if asv_colors == None:
         if withusercolors:
             asv_colors = parse_asvcolor_data(fpc)
         else:
             asv_colors = None
+
     # aggregate taxonomic levels
     Xagg = taxonomic_aggregation(X, tax, agg_levels, distanceperlevel=distanceperlevel)
 
@@ -647,7 +652,10 @@ def taxumap(
         X_embedded = pd.DataFrame(
             embedding, index=X.index, columns=["phyUMAP-1", "phyUMAP-2"]
         )
-        X_embedded.to_csv("results/embedded.csv")
+
+        if save_embedding:
+            X_embedded.to_csv("results/embedded.csv")
+
     if print_figure:
         # diversity per sample
         # if not np.all(X.sum(axis=1) > 0):
@@ -700,6 +708,7 @@ if __name__ == "__main__":
                 "scatterbgcolor=",
             ],
         )
+
     except getopt.GetoptError:
         sys.exit("unknown options")
 
@@ -712,6 +721,7 @@ if __name__ == "__main__":
     withusercolors = False
     with_diversity_background = False
     loadembedding = False
+    bgcolor = "white"
 
     for opt, arg in opts:
         if opt in ("-e", "--scalingpertaxlevel"):
@@ -737,4 +747,5 @@ if __name__ == "__main__":
         print_with_diversity=with_diversity_background,
         loadembedding=loadembedding,
         bgcolor=bgcolor,
+        save_embedding=True,
     )
