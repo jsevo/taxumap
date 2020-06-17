@@ -16,7 +16,8 @@ from sklearn.preprocessing import MinMaxScaler
 try:
     # Ideally should have these installed
     from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
-
+except:
+    pass
 
 def aggregate_at_taxlevel(X, tax, level):
     """Helper function. For a given taxonomic level, aggregate relative abundances by summing all members of corresponding taxon."""
