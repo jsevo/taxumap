@@ -13,9 +13,8 @@ import warnings
 import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
 
-try:
-    # Ideally should have these installed
-    from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
+# Ideally should have these installed
+from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
 
 
 def aggregate_at_taxlevel(X, tax, level):
@@ -47,7 +46,7 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
         )
         X_consider = X_consider[X_consider.values].index
     else:
-        X_consider = X
+        X_consider = X.columns
 
     Xscaled = scaler.fit_transform(X[X_consider])
 
@@ -281,227 +280,6 @@ def taxonomic_aggregation(
     return X
 
 
-def pretty_print(
-    X,
-    embedding,
-    ivs,
-    tax,
-    usercolors=None,
-    with_diversity_background=True,
-    bgcolor="white",
-):
-    """Make a scatter plot of taxumap-embedded microbiota data. Samples are colored by their dominant Genus. The top 15 most abundant genera have a unique color, all other taxa are grey. Optionally, interpolate the diversity of samples in the local region of the embedded space and color the background accordingly, with darker shades indicating higher diversity."""
-
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-
-    from sklearn.preprocessing import LabelEncoder
-
-    dominant_taxon_name = X.idxmax(axis=1)
-    dominant_taxon_name = dominant_taxon_name.apply(lambda v: tax.loc[v]["Genus"])
-    dominant_taxon = dominant_taxon_name.copy()
-
-    top_15_taxa = dominant_taxon.value_counts().sort_values(ascending=False).head(15)
-    top_15_taxa_labels = top_15_taxa.index
-
-    dominant_taxon = dominant_taxon.apply(lambda v: v if v in top_15_taxa else "-1")
-
-    lenc = LabelEncoder().fit(dominant_taxon)
-    _t = lenc.transform(dominant_taxon)
-    dominant_taxon = pd.Series(_t, index=X.index)
-
-    from matplotlib import cm
-
-    _ncolors = len(top_15_taxa)
-    _ncolors = _ncolors if _ncolors <= 15 else 16
-
-    cmap = cm.get_cmap("tab20c", _ncolors)
-    embedding_colors = [cmap(x) if x != 0 else "whitesmoke" for x in dominant_taxon]
-    embedding_labels = [
-        lenc.inverse_transform([x])[0]
-        if lenc.inverse_transform([x])[0] != "-1"
-        else "other"
-        for x in dominant_taxon
-    ]
-
-    ##set up figure
-    plt.close("all")
-    fig, ax = plt.subplots(figsize=(5, 5))
-    if with_diversity_background:
-        ## heatmap as background indicateing interpolated diversity in that region
-        cmap = sns.dark_palette(color="white", as_cmap=True, reverse=True)
-        from scipy.interpolate import griddata
-
-        xmin, xmax = np.floor(min(embedding[:, 0])), np.ceil(max(embedding[:, 0]))
-        ymin, ymax = np.floor(min(embedding[:, 1])), np.ceil(max(embedding[:, 1]))
-        grid_x, grid_y = np.mgrid[xmin:xmax:15j, ymin:ymax:15j]
-        grid_z1 = griddata(
-            embedding, ivs, (grid_x, grid_y), method="linear", fill_value=np.nan
-        )
-        # plot heatmap
-        ax.imshow(
-            np.flipud(grid_z1.T),
-            extent=(xmin, xmax, ymin, ymax),
-            cmap=cmap,
-            vmin=1,
-            vmax=15,
-            alpha=0.25,
-        )
-        ax.set_facecolor(bgcolor)
-
-    # ax.set_aspect('equal',adjustable='box')
-    ## taxumap scatter
-    if usercolors is None:
-        noncolored_idx = list(map(lambda x: x == "whitesmoke", embedding_colors))
-        ax.scatter(
-            embedding[noncolored_idx, 0],
-            embedding[noncolored_idx, 1],
-            c=np.array(embedding_colors)[noncolored_idx],
-            s=3,
-            alpha=1,
-            marker="o",
-            rasterized=True,
-        )
-        colored_idx = list(map(lambda x: x != "whitesmoke", embedding_colors))
-        ax.scatter(
-            embedding[colored_idx, 0],
-            embedding[colored_idx, 1],
-            c=np.array(embedding_colors)[colored_idx],
-            s=3,
-            alpha=1,
-            marker="o",
-            rasterized=True,
-        )
-        ax.scatter(
-            embedding[:, 0],
-            embedding[:, 1],
-            facecolor="none",
-            edgecolor="k",
-            linewidth=0.1,
-            s=3,
-            alpha=1,
-            marker="o",
-            rasterized=True,
-        )
-        from matplotlib.lines import Line2D
-
-        legend_elements = [
-            Line2D(
-                [0],
-                [0],
-                marker="o",
-                linestyle="",
-                alpha=1,
-                color=c,  # cmap(c),
-                label=n,
-            )
-            for (n, c) in set(zip(embedding_labels, embedding_colors))
-        ]
-        ax.legend(handles=legend_elements, loc=(1.1, 0.01))
-
-    else:
-        dominant_asv = X.idxmax(axis=1)
-        dominant_asv_rel = X.max(axis=1)
-        embedding_colors = [
-            "whitesmoke" if dominant_asv_rel[i] < 0.3 else usercolors.loc[x].values[0]
-            for i, x in dominant_asv.iteritems()
-        ]
-        noncolored_idx = list(map(lambda x: x == "whitesmoke", embedding_colors))
-        ax.scatter(
-            embedding[noncolored_idx, 0],
-            embedding[noncolored_idx, 1],
-            c=np.array(embedding_colors)[noncolored_idx],
-            s=3,
-            alpha=1,
-            linewidth=0.1,
-            marker="o",
-            rasterized=True,
-        )
-        colored_idx = list(map(lambda x: x != "whitesmoke", embedding_colors))
-        ax.scatter(
-            embedding[colored_idx, 0],
-            embedding[colored_idx, 1],
-            c=np.array(embedding_colors)[colored_idx],
-            s=3,
-            alpha=1,
-            linewidth=0.1,
-            marker="o",
-            rasterized=True,
-        )
-
-        from matplotlib.lines import Line2D
-
-        most_dominating = (
-            dominant_asv.loc[dominant_asv_rel >= 0.3]
-            .apply(lambda v: tax.loc[v]["Genus"])
-            .value_counts()
-            .sort_values(ascending=False)
-            .head(30)
-        )
-
-        most_dominating_color = (
-            dominant_asv.loc[dominant_asv_rel >= 0.3]
-            .apply(lambda v: usercolors.loc[v].values[0])
-            .value_counts()
-            .sort_values(ascending=False)
-            .head(30)
-            .index
-        )
-
-        legend_names = np.array(
-            list(
-                map(
-                    lambda v: tax.loc[v].Genus.values,
-                    [
-                        dominant_asv[dominant_asv_rel > 0.3]
-                        .value_counts()
-                        .head(30)
-                        .index.to_list()
-                    ],
-                )
-            )
-        ).reshape(-1)
-        legend_colors = np.array(
-            list(
-                map(
-                    lambda v: usercolors.loc[v].values,
-                    [
-                        dominant_asv[dominant_asv_rel > 0.3]
-                        .value_counts()
-                        .head(30)
-                        .index.to_list()
-                    ],
-                )
-            )
-        ).reshape(-1)
-
-        legend_elements = [
-            Line2D(
-                [0],
-                [0],
-                marker="o",
-                linestyle="",
-                alpha=1,
-                color=c,  # cmap(c),
-                label=n,
-            )
-            for (n, c) in set(zip(legend_names, legend_colors))
-        ]
-        ax.legend(handles=legend_elements, loc=(1.1, 0.01))
-
-    ax.set_yticks([])
-    ax.set_xticks([])
-    ax.set_ylabel("phyUMAP-2")
-    ax.set_xlabel("phyUMAP-1")
-    sns.despine()
-    plt.gcf().savefig("results/projection.pdf", dpi=250, bbox_inches="tight")
-    plt.axis("off")
-    ax.legend().remove()
-    plt.gcf().savefig(
-        "results/no_axes_projection.png", dpi=250,
-    )
-
-
 def taxumap(
     agg_levels,
     withscaling,
@@ -521,6 +299,8 @@ def taxumap(
     transform_seed=None,
     debug=False,
     save_embedding=False,
+    neigh=120,
+    min_dist=0.2,
 ):
     """
     taxumap embedding of microbiota composition data. Data is expected to be compositional, i.e. each row sums to 1. Two tables are required: the microbiota data and a taxonomy table.
@@ -555,7 +335,7 @@ def taxumap(
     Returns
     ----------
 
-    taxumap : UMAP object fit to data
+    TAXUMAP: UMAP object fit to data
 
     X_embedded : pandas.DataFrame of 2-D coordinates with indeces from the microbiota_table.l
 
@@ -569,7 +349,7 @@ def taxumap(
     if tax is None:
         tax = parse_taxonomy_data(fpt)
 
-    if asv_colors == None:
+    if asv_colors is None:
         if withusercolors:
             asv_colors = parse_asvcolor_data(fpc)
         else:
@@ -587,35 +367,30 @@ def taxumap(
 
     from umap import UMAP
 
-    # neigh = 5 if int(Xscaled.shape[0] / 100) < 5 else int(Xscaled.shape[0] /
-    #                                                        100)
-    neigh = 120
-    min_dist = 0.2
-
     if loadembedding:
         X_embedded = pd.read_csv("results/embedded.csv", index_col="index_column")
         embedding = X_embedded.values
-        taxumap = {}
+        TAXUMAP = {}
 
     else:
         if withscaling:
-            taxumap = UMAP(
+            TAXUMAP = UMAP(
                 n_neighbors=neigh, min_dist=min_dist, metric="manhattan"
             ).fit(Xscaled)
 
         elif distanceperlevel:
-            taxumap = UMAP(
+            TAXUMAP = UMAP(
                 n_neighbors=neigh, min_dist=min_dist, metric="precomputed"
             ).fit(Xscaled)
         else:
-            taxumap = UMAP(
+            TAXUMAP = UMAP(
                 n_neighbors=neigh, min_dist=min_dist, metric=distancemetric
             ).fit(Xscaled)
 
-        embedding = taxumap.transform(Xscaled)
+        embedding = TAXUMAP.transform(Xscaled)
 
         if transform_seed is not None:
-            taxumap.transform_seed = transform_seed
+            TAXUMAP.transform_seed = transform_seed
 
         X_embedded = pd.DataFrame(
             embedding, index=X.index, columns=["phyUMAP-1", "phyUMAP-2"]
@@ -651,9 +426,9 @@ def taxumap(
         )
 
     if debug:
-        return (taxumap, X_embedded, Xscaled, X)
+        return (TAXUMAP, X_embedded, Xscaled, X)
     else:
-        return (taxumap, X_embedded)
+        return (TAXUMAP, X_embedded)
 
 
 if __name__ == "__main__":
