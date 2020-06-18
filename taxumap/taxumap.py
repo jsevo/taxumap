@@ -3,18 +3,20 @@
 __author__ = "Jonas Schluter"
 __copyright__ = "Copyright 2020, MIT License"
 
+import os
+
 #!/usr/bin/env python
 import sys
-import os
+import warnings
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
-import warnings
 import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
 
 # Ideally should have these installed
-from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
+# from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
 
 
 def aggregate_at_taxlevel(X, tax, level):
@@ -145,10 +147,11 @@ def parse_taxonomy_data(fp):
             tax = tax.set_index(_low)
             if np.any(tax.isna()):
                 warnings.warn(
-                    "Missing values (NaN) found for some taxonomy levels, filling with higher taxonomic level names"
+                    "Missing values (NaN) found for some taxonomy levels, you should consider filling with higher taxonomic level names /n \
+                    Please consult the documentation for best way to move forward"
                 )
 
-                tax = fill_taxonomy_table(tax)
+                # tax = fill_taxonomy_table(tax)
 
             return tax
 
