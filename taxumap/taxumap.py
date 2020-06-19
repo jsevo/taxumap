@@ -15,6 +15,7 @@ import pandas as pd
 import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
 
+# DEL
 # Ideally should have these installed
 # from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
 
@@ -98,74 +99,85 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
             )
 
 
-def parse_taxonomy_data(fp):
+def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
     """Load the taxonomy data."""
     """Todo: Make it so this fxn takes 'idx_col' parameter instead of forcing
              users to set the ASV/OTU col at the end"""
 
     fp = Path(fp)
 
+    # This tests specifically if a path exists, regardless if the path points to a file or a directory.
+
+    # To follow EAFP guidelines, we will run this and then attempt to simply read in the file via Pandas.
+
     try:
 
-        f = fp.resolve(strict=True)
+        try:
+            fp = fp.resolve(strict=True)
 
-    except FileNotFoundError as fe:
-        print("{0}".format(fe))
-        print(
-            "The taxonomy table should be located in the data/ subfolder and named taxonomy.csv"
-        )
-
-        sys.exit(2)
-
-    if f.is_file():
+        except FileNotFoundError as fe:
+            print("{0}".format(fe))
+            print(
+                "If using default settings, please make sure /n \
+                that the taxonomy table is located in the 'data/' subfolder and named 'taxonomy.csv /n'"
+            )
+            print(
+                "Otherwise, please make sure that you are directing taxumap \
+                    to the proper location of your taxonomy file."
+            )
+            sys.exit(2)
 
         try:
-            tax = pd.read_csv(fp,)
+            tax = pd.read_csv(fp)
 
+            print()
             print(
-                "Reading taxonomy table. Assuming columns are ordered by phylogeny with in descending order of hierarchy."
+                "Reading taxonomy table. Assuming columns are ordered by phylogeny with in descending order of hierarchy:"
             )
-            print("e.g. Kingdom, Phylum, ... , Genus, Species, etc")
+            print("e.g. Kingdom, Phylum, ... , Genus, Species, etc.")
+            print()
+            print("The OTU or ASV column must be labeled as 'OTU' or 'ASV'.")
 
-            print("Make sure that the OTU/ASV is the LAST COLUMN")
-
-            _low = tax.columns[-1]
-            try:
-                assert _low.lower() in [
-                    "asv",
-                    "otu",
-                ], "%s not in ['ASV', 'OTU'], moving on"
-
-            except AssertionError as ae:
-                print(ae)
-
+        except (IsADirectoryError, pd.errors.ParserError, FileNotFoundError) as e:
+            print(e)
             print(
-                "Setting %s as index, THIS ASSUMES %s IS THE LOWEST TAXONOMIC LEVEL"
-                % (_low, _low)
+                "Your file path may be pointing to a file that doesn't exist, or \
+                simply to a directory. Please re-check your file path."
             )
+            sys.exit(2)
 
-            tax = tax.set_index(_low)
+        try:
+
+            idx_lowest_level = tax.columns[
+                tax.columns.str.lower().isin([x.lower() for x in idx_col])
+            ]
+
+            tax.set_index(idx_lowest_level.to_list(), inplace=True)
+
+        except ValueError as e:
+            print(e)
+            print("ASV/OTU not found in your columns")
+            sys.exit(2)
+
+        else:
+
             if np.any(tax.isna()):
                 warnings.warn(
-                    "Missing values (NaN) found for some taxonomy levels, you should consider filling with higher taxonomic level names /n \
-                    Please consult the documentation for best way to move forward"
+                    "Missing values (NaN) found for some taxonomy levels, you should consider filling with higher taxonomic level names. Please consult the documentation for best way to move forward."
                 )
 
-                # tax = fill_taxonomy_table(tax)
+            # should we just read_csv() and only allow certain datatypes (i.e. str, obj?)
+            if any(tax.dtypes == (int, float)):
+                warnings.warn(
+                    "Your taxonomy table contains columns may contain numerical data. Please consult documentation because you may have incorrectly formatted your dataframe."
+                )
 
             return tax
 
-        except ValueError as ve:
-            print("{0}".format(ve))
-            # print(
-            #     "Please make sure the taxonomy has a column labeled 'index_column' which contains the sample IDs"
-            # )
-            print("Error - please make sure that the OTU/ASV is the LAST COLUMN")
-
-        except:
-            print(
-                "An unknown error occurred during taxonomy table parsing. Please see the instructions for how to run taxumap."
-            )
+    except:
+        print(
+            "An unknown error occurred during taxonomy table parsing. Please see the documentation for how to run taxumap."
+        )
 
 
 def parse_asvcolor_data(fp):
