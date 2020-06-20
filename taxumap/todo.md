@@ -1,5 +1,11 @@
 # Todo!
 
+## General
+
+* Documentation for all functions in:
+
+[ ] - `taxumap.py`
+
 ## `taxumap.py`
 
 * On the topic of `fill_taxonomy` function

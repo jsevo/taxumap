@@ -1,3 +1,16 @@
+import os
+
+#!/usr/bin/env python
+import sys
+import warnings
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import scipy.spatial.distance as ssd
+from sklearn.preprocessing import MinMaxScaler
+
+
 def pretty_print(
     X,
     embedding,
@@ -218,7 +231,7 @@ def pretty_print(
         plt.gcf().savefig(
             "results/no_axes_projection.png", dpi=250,
         )
-        return(fig)
+        return fig
 
     except FileNotFoundError as fe:
         print(fe)
@@ -232,8 +245,15 @@ def pretty_print(
         pass
 
 
-def scatter_plot_with_colors(embedding, colors, legend_items = [], bgcolor="white",
-                             scatter_alpha=1., fig=None, ax=None):
+def scatter_plot_with_colors(
+    embedding,
+    colors,
+    legend_items=[],
+    bgcolor="white",
+    scatter_alpha=1.0,
+    fig=None,
+    ax=None,
+):
     ##set up figure
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -243,20 +263,18 @@ def scatter_plot_with_colors(embedding, colors, legend_items = [], bgcolor="whit
         fig, ax = plt.subplots(figsize=(5, 5))
 
     ax.scatter(
-            embedding[:, 0],
-            embedding[:, 1],
-            c = colors,
-            alpha=scatter_alpha,
-            s=3,
-            marker="o",
-            rasterized=True,
-        )
+        embedding[:, 0],
+        embedding[:, 1],
+        c=colors,
+        alpha=scatter_alpha,
+        s=3,
+        marker="o",
+        rasterized=True,
+    )
     ax.set_yticks([])
     ax.set_xticks([])
     ax.set_ylabel("phyUMAP-2")
     ax.set_xlabel("phyUMAP-1")
     ax.set_facecolor(bgcolor)
     sns.despine(trim=True, offset=5)
-    return(fig, ax)
-
-
+    return (fig, ax)
