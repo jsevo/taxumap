@@ -155,36 +155,53 @@ class Taxumap:
         return self
 
     def __repr__(self):
-        return "Taxumap('{}', '{}', '{}', '{}')".format(
-            self.agg_levels, self.weight, self.fpx, self.fpt
-        )
 
-    # def __str__(self):
+        if self._is_df_loaded:
+            return "Taxumap(agg_levels = '{}', weight = '{}', taxonomy = '{}', taxonomy_meta = '{}')".format(
+                self.agg_levels,
+                self.weight,
+                "loaded from local scope",
+                "loaded from local scope",
+            )
 
-    #     # create an if...elif blcok for if fpt exists or not
-    #     # this is a part of the package where I build in the ability to
-    #     # create from file or create from pandas df.
+        elif self._is_fp_loaded:
+            return "Taxumap(agg_levels = '{}', weight = '{}', fpx = '{}', fpt = '{}')".format(
+                self.agg_levels, self.weight, self.fpx, self.fpt
+            )
 
-    #     for each_param in []
+        else:
+            return "Taxumap(agg_levels = '{}', weight = '{}', fpx = '{}', fpt = '{}')".format(
+                self.agg_levels, self.weight, self.fpx, self.fpt
+            )
 
-    #         ["Taxumap with agg_levels = {} and weights = {}. \n \n".format(
-    #                 self.agg_levels, self.weight
-    #             )]
+    def __str__(self):
 
-    #     message = (
-    #         "Taxumap with agg_levels = {} and weights = {}. \n \n".format(
-    #             self.agg_levels, self.weight
-    #         )
+        # create an if...elif blcok for if fpt exists or not
+        # this is a part of the package where I build in the ability to
+        # create from file or create from pandas df.
 
-    #     if self._loaded_from_df:
-    #         + "The taxonomy and taxonomy_meta data generated from files located \
-    #      at {} and {}, respectively".format(
-    #             self.fpx, self.fpt
-    #         )
-    #     )
+        messages = [
+            "Taxumap with agg_levels = {} and weights = {}.".format(
+                self.agg_levels, self.weight
+            )
+        ]
 
-    #     message = "\n".join(messages)
-    #     return message
+        if self._is_df_loaded:
+            messages.append(
+                "The `taxonomy` and `taxonomy_meta` dataframes were passed in from local variables."
+            )
+            return "\n \n".join(messages)
+
+        elif self._is_fp_loaded:
+            messages.append(
+                "The taxonomy and taxonomy_meta dataframes were generated from files located at\n'{}'\nand\n'{}',\nrespectively".format(
+                    self.fpx, self.fpt
+                )
+            )
+            return "\n \n".join(messages)
+
+        else:
+            return repr(self)
 
 
 def taxonomic_aggregation(
