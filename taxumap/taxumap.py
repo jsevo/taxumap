@@ -15,10 +15,99 @@ import pandas as pd
 import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
 
-import taxumap.tools as tls
 import taxumap.dataloading as parse
+import taxumap.tools as tls
 import taxumap.visualizations as viz
 
+from umap import UMAP
+
+
+class Taxumap:
+    def __init__(
+        self,
+        agg_levels=["Phylum", "Family"],
+        weight=None,
+        taxonomy=None,
+        taxonomy_meta=None,
+        fpt=None,
+        fpx=None,
+    ):
+
+        self.agg_levels = agg_levels
+
+        self.fpt = "/Users/granthussey/github/taxumap/taxumap/data/taxonomy.csv"
+        self.fpx = "/Users/granthussey/github/taxumap/taxumap/data/microbiota_table.csv"
+
+        # I am pretty sure that my use of If...Else below violates the EAFP principles - should use Try..Except instead
+
+        # Todo: Add in self.fpx is None check, etc.
+
+        if weight is None:
+            self.weight = [1] * len(agg_levels)
+        else:
+            # TODO: Input checks
+            self.weight = weight
+
+        if taxonomy is None:
+            self.taxonomy = parse.parse_microbiome_data(self.fpx)
+        else:
+            # TODO: Input checks
+            self.taxonomy = taxonomy
+
+        if taxonomy_meta is None:
+            self.taxonomy_meta = parse.parse_taxonomy_data(self.fpt)
+        else:
+            # TODO: Input checks
+            self.taxonomy_meta = taxonomy_meta
+
+    def transform(self, debug=False):
+
+        # I hard-coded distanceperlevel for now.
+        Xagg = taxonomic_aggregation(
+            self.taxonomy, self.taxonomy_meta, self.agg_levels, distanceperlevel=False
+        )
+
+        # I hard-coded scaling for now.
+        print("Not scaling")
+        Xscaled = Xagg
+
+        # Default parameters from old legacy file
+        neigh = 120
+        min_dist = 0.2
+        distance_metric = "braycurtis"
+
+        self.taxumap = UMAP(
+            n_neighbors=neigh, min_dist=min_dist, metric=distance_metric
+        ).fit(Xscaled)
+        self.embedding = self.taxumap.transform(Xscaled)
+
+        if debug:
+            self.Xscaled = Xscaled
+            self.Xagg = Xagg
+
+        return self
+
+    def __repr__(self):
+        return "Taxumap('{}', '{}', '{}', '{}')".format(
+            self.agg_levels, self.weight, self.fpx, self.fpt
+        )
+
+    def __str__(self):
+
+        # create an if...elif blcok for if fpt exists or not
+        # this is a part of the package where I build in the ability to
+        # create from file or create from pandas df.
+
+        message = (
+            "Taxumap with agg_levels = {} and weights = {}. \n \n".format(
+                self.agg_levels, self.weight
+            )
+            + "The taxonomy and taxonomy_meta data generated from files located \
+         at {} and {}, respectively".format(
+                self.fpx, self.fpt
+            )
+        )
+        return message
 
 def taxonomic_aggregation(
     X, tax, agg_levels, distanceperlevel=False, distancemetric="braycurtis"
@@ -85,7 +174,7 @@ def taxonomic_aggregation(
     return X
 
 
-def taxumap(
+def taxumap_legacy(
     agg_levels,
     withscaling,
     distanceperlevel,
@@ -169,8 +258,6 @@ def taxumap(
     else:
         print("not scaling")
         Xscaled = Xagg
-
-    from umap import UMAP
 
     if loadembedding:
         X_embedded = pd.read_csv("results/embedded.csv", index_col="index_column")
@@ -292,7 +379,7 @@ if __name__ == "__main__":
         elif opt in ("-l", "--loadembedding"):
             loadembedding = True
 
-    _ = taxumap(
+    _ = taxumap_legacy(
         agg_levels,
         withscaling,
         distanceperlevel,
