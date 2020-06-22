@@ -35,12 +35,7 @@ class Taxumap:
 
         self.agg_levels = agg_levels
 
-        self.fpt = "/Users/granthussey/github/taxumap/taxumap/data/taxonomy.csv"
-        self.fpx = "/Users/granthussey/github/taxumap/taxumap/data/microbiota_table.csv"
-
         # I am pretty sure that my use of If...Else below violates the EAFP principles - should use Try..Except instead
-
-        # Todo: Add in self.fpx is None check, etc.
 
         if weight is None:
             self.weight = [1] * len(agg_levels)
@@ -48,17 +43,89 @@ class Taxumap:
             # TODO: Input checks
             self.weight = weight
 
-        if taxonomy is None:
-            self.taxonomy = parse.parse_microbiome_data(self.fpx)
-        else:
-            # TODO: Input checks
-            self.taxonomy = taxonomy
+        # Set taxonomy df
+        try:
+            if taxonomy is None and fpx is None:
+                raise ValueError
+            elif isinstance(taxonomy, pd.DataFrame):
+                # TODO: Check taxonomy df for validity
+                print("Recognized `taxonomy` parameter as Pandas DataFrame")
+                self.fpx = None
+                self.taxonomy = taxonomy
+            elif isinstance(fpx, str):
+                self.fpx = fpx
+                self.taxonomy = parse.parse_microbiome_data(fpx)
+            else:
+                raise NameError
+        except (ValueError, NameError) as e:
+            _name_value_error(e, "fpx", "taxonomy")
+            raise
 
-        if taxonomy_meta is None:
-            self.taxonomy_meta = parse.parse_taxonomy_data(self.fpt)
+        # Set taxonomy_meta df
+        try:
+            if taxonomy_meta is None and fpt is None:
+                raise ValueError
+            elif isinstance(taxonomy_meta, pd.DataFrame):
+                # TODO: Check taxonomy_meta df for validity
+                print("Recognized `taxonomy_meta` parameter as Pandas DataFrame")
+                self.fpt = None
+                self.taxonomy_meta = taxonomy_meta
+            elif isinstance(fpx, str):
+                self.fpt = fpt
+                self.taxonomy_meta = parse.parse_taxonomy_data(fpt)
+            else:
+                raise NameError
+        except (ValueError, NameError) as e:
+            _name_value_error(e, "fpt", "taxonomy_meta")
+            raise
+
+    @property
+    def _exist_tax_meta_df(self):
+        return isinstance(self.taxonomy_meta, pd.DataFrame)
+
+    @property
+    def _exist_tax_meta_fp(self):
+        """Returns true if the `fpt` parameter is a valid filepath"""
+        try:
+            logic = Path(self.fpt).is_file()
+        except TypeError:
+            return False
         else:
-            # TODO: Input checks
-            self.taxonomy_meta = taxonomy_meta
+            return logic
+
+    @property
+    def _exist_tax_df(self):
+        return isinstance(self.taxonomy, pd.DataFrame)
+
+    @property
+    def _exist_tax_fp(self):
+        """Returns true if the `fpx` parameter is a valid filepath"""
+        try:
+            logic = Path(self.fpx).is_file()
+        except TypeError:
+            return False
+        else:
+            return logic
+
+    @property
+    def _is_df_loaded(self):
+        """Returns true if the object was initialized with df objects"""
+        return all((self._exist_tax_df, self._exist_tax_meta_df)) and not all(
+            (self._exist_tax_fp, self._exist_tax_meta_fp)
+        )
+
+    @property
+    def _is_fp_loaded(self):
+        """Returns true if the object was initialized with filepaths, or
+        if all such pre-requisites exist"""
+        return all(
+            (
+                self._exist_tax_df,
+                self._exist_tax_fp,
+                self._exist_tax_meta_fp,
+                self._exist_tax_meta_df,
+            )
+        )
 
     def transform(self, debug=False):
 
@@ -92,22 +159,33 @@ class Taxumap:
             self.agg_levels, self.weight, self.fpx, self.fpt
         )
 
-    def __str__(self):
+    # def __str__(self):
 
-        # create an if...elif blcok for if fpt exists or not
-        # this is a part of the package where I build in the ability to
-        # create from file or create from pandas df.
+    #     # create an if...elif blcok for if fpt exists or not
+    #     # this is a part of the package where I build in the ability to
+    #     # create from file or create from pandas df.
 
-        message = (
-            "Taxumap with agg_levels = {} and weights = {}. \n \n".format(
-                self.agg_levels, self.weight
-            )
-            + "The taxonomy and taxonomy_meta data generated from files located \
-         at {} and {}, respectively".format(
-                self.fpx, self.fpt
-            )
-        )
-        return message
+    #     for each_param in []
+
+    #         ["Taxumap with agg_levels = {} and weights = {}. \n \n".format(
+    #                 self.agg_levels, self.weight
+    #             )]
+
+    #     message = (
+    #         "Taxumap with agg_levels = {} and weights = {}. \n \n".format(
+    #             self.agg_levels, self.weight
+    #         )
+
+    #     if self._loaded_from_df:
+    #         + "The taxonomy and taxonomy_meta data generated from files located \
+    #      at {} and {}, respectively".format(
+    #             self.fpx, self.fpt
+    #         )
+    #     )
+
+    #     message = "\n".join(messages)
+    #     return message
+
 
 def taxonomic_aggregation(
     X, tax, agg_levels, distanceperlevel=False, distancemetric="braycurtis"
@@ -172,6 +250,16 @@ def taxonomic_aggregation(
             % ((len(agg_levels) + 1))
         )
     return X
+
+
+def _name_value_error(e, fp_param, df_param):
+    print(e)
+    print()
+    print(
+        "Please provide the constructor with one of the following: a filepath to your {} file via parameter `{}`, or with an initialized variable for your {} dataframe via the parameter `{}`".format(
+            df_param, fp_param, df_param, df_param
+        )
+    )
 
 
 def taxumap_legacy(
