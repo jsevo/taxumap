@@ -31,6 +31,7 @@ class Taxumap:
         taxonomy_meta=None,
         fpt=None,
         fpx=None,
+        name=None,
     ):
 
         self.agg_levels = agg_levels
@@ -78,6 +79,11 @@ class Taxumap:
         except (ValueError, NameError) as e:
             _name_value_error(e, "fpt", "taxonomy_meta")
             raise
+
+        if isinstance(name, str):
+            self.name = name
+        else:
+            self.name = None
 
     @property
     def _exist_tax_meta_df(self):
@@ -127,6 +133,20 @@ class Taxumap:
             )
         )
 
+    @property
+    def _embedded_csv_name(self):
+        if isinstance(self.name, str):
+            return "_".join([self.name, "embedded.csv"])
+        else:
+            return "embedded.csv"
+
+    @property
+    def _embedded_pickle_name(self):
+        if isinstance(self.name, str):
+            return "_".join([self.name, "taxumap_pickle.pickle"])
+        else:
+            return "taxumap_pickle.pickle"
+
     def transform(self, debug=False, save=False, outdir=None, pickle=False):
 
         # I hard-coded distanceperlevel for now.
@@ -147,6 +167,7 @@ class Taxumap:
             n_neighbors=neigh, min_dist=min_dist, metric=distance_metric
         ).fit(Xscaled)
         self.embedding = self.taxumap.transform(Xscaled)
+        self.index = Xscaled.index
 
         if debug:
             self.Xscaled = Xscaled
@@ -179,12 +200,21 @@ class Taxumap:
                     self.save_it(outdir, pickle)
         return self
 
-    def save_it(self, outdir, pickle):
+    def save_it(self, outdir=None, pickle=False):
+
+        if outdir is None:
+            print("Saving to ./results")
+            outdir = Path("./results").resolve()
+            try:
+                os.mkdir(outdir)
+                print("Making ./results folder...")
+            except FileExistsError:
+                print("./results folder already exists")
 
         try:
-            pd.DataFrame(self.embedding, columns=["taxUMAP1", "taxUMAP2"]).to_csv(
-                os.path.join(outdir, "embedding.csv")
-            )
+            pd.DataFrame(
+                self.embedding, columns=["taxUMAP1", "taxUMAP2"], index=self.index
+            ).to_csv(os.path.join(outdir, self._embedded_csv_name))
         except AttributeError as e:
             print(e)
             print(
@@ -196,12 +226,13 @@ class Taxumap:
             if pickle:
                 import pickle
 
-                pickle.dump(self, os.path.join(outdir, "taxumap_pickle.pickle"))
+                with open(os.path.join(outdir, self._embedded_pickle_name), "wb") as f:
+                    pickle.dump(self, f)
 
     def __repr__(self):
 
         if self._is_df_loaded:
-            return "Taxumap(agg_levels = '{}', weight = '{}', taxonomy = '{}', taxonomy_meta = '{}')".format(
+            return "Taxumap(agg_levels = {}, weight = {}, taxonomy = '{}', taxonomy_meta = '{}')".format(
                 self.agg_levels,
                 self.weight,
                 "loaded from local scope",
@@ -209,12 +240,12 @@ class Taxumap:
             )
 
         elif self._is_fp_loaded:
-            return "Taxumap(agg_levels = '{}', weight = '{}', fpx = '{}', fpt = '{}')".format(
+            return "Taxumap(agg_levels = {}, weight = {}, fpx = '{}', fpt = '{}')".format(
                 self.agg_levels, self.weight, self.fpx, self.fpt
             )
 
         else:
-            return "Taxumap(agg_levels = '{}', weight = '{}', fpx = '{}', fpt = '{}')".format(
+            return "Taxumap(agg_levels = {}, weight = {}, fpx = '{}', fpt = '{}')".format(
                 self.agg_levels, self.weight, self.fpx, self.fpt
             )
 
