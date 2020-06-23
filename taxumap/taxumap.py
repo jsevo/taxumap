@@ -1,6 +1,7 @@
-# Authors: Jonas Schluter <jonas.schluter@nyulangone.org>
-# License: BSD 3 clause
-__author__ = "Jonas Schluter"
+# Authors: Jonas Schluter <jonas.schluter@nyulangone.org>, Grant Hussey <grant.hussey@nyulangone.org>
+# License: BSD 3 clause # Which license?
+
+__author__ = ["Jonas Schluter", "Grant Hussey"]
 __copyright__ = "Copyright 2020, MIT License"
 
 import os
