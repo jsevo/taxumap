@@ -127,7 +127,7 @@ class Taxumap:
             )
         )
 
-    def transform(self, debug=False):
+    def transform(self, debug=False, save=False, outdir=None, pickle=False):
 
         # I hard-coded distanceperlevel for now.
         Xagg = taxonomic_aggregation(
@@ -152,7 +152,51 @@ class Taxumap:
             self.Xscaled = Xscaled
             self.Xagg = Xagg
 
+        if save:
+            try:
+                outdir = Path(outdir).resolve(strict=True)
+            except (FileNotFoundError, TypeError) as e:
+                print(e)
+                print(
+                    '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
+                )
+                outdir = Path("./results").resolve()
+            except Exception as e:
+                throw_unknown_save_error(e)
+
+            if outdir.is_dir():
+                self.save_it(outdir, pickle)
+            else:
+                try:
+                    os.mkdir(outdir)
+                except FileExistsError as e:
+                    print(e)
+                    print(
+                        '\nUnable to automatically save embedding, most likely do to a file called "results" in your PWD.\n'
+                    )
+                    sys.exit(2)
+                else:
+                    self.save_it(outdir, pickle)
         return self
+
+    def save_it(self, outdir, pickle):
+
+        try:
+            pd.DataFrame(self.embedding, columns=["taxUMAP1", "taxUMAP2"]).to_csv(
+                os.path.join(outdir, "embedding.csv")
+            )
+        except AttributeError as e:
+            print(e)
+            print(
+                "\nEmbedding not currently populated. Please run taxumap.Taxumap.transform(save=True).\n"
+            )
+        except Exception as e:
+            throw_unknown_save_error(e)
+        else:
+            if pickle:
+                import pickle
+
+                pickle.dump(self, os.path.join(outdir, "taxumap_pickle.pickle"))
 
     def __repr__(self):
 
@@ -202,6 +246,12 @@ class Taxumap:
 
         else:
             return repr(self)
+
+
+def throw_unknown_save_error(e):
+    print(e)
+    print("\nUnknown error has occured. Cannot save embedding as instructed.\n")
+    sys.exit(2)
 
 
 def taxonomic_aggregation(
@@ -428,71 +478,124 @@ def taxumap_legacy(
         return (TAXUMAP, X_embedded)
 
 
+# if __name__ == "__main__":
+#     import sys, getopt
+
+#     """
+#     use with options:
+
+#     -e OR WITH --scalingpertaxlevel
+#     -p OR WITH --print_figure
+#     -s OR WITH --with_diversity_background
+#     -a OR --asvcolors
+#     -c OR --scatterbgcolor : a valid matplotlib color for the background of the scatter plot, default: white
+#     -l OR --loadembedding : load already calculated embedding from result/embedding.csv
+#     """
+#     argv = sys.argv[1:]
+
+#     try:
+#         opts, args = getopt.getopt(
+#             argv,
+#             "epsalc:",
+#             [
+#                 "scalingpertaxlevel",
+#                 "print_figure",
+#                 "with_diversity_background",
+#                 "asvcolors",
+#                 "loadembedding",
+#                 "scatterbgcolor=",
+#             ],
+#         )
+
+#     except getopt.GetoptError:
+#         sys.exit("unknown options")
+
+#     agg_levels = None
+#     withscaling = False
+#     distanceperlevel = False
+#     distancemetric = "braycurtis"
+#     print_figure = False
+#     distanceperlevel = False
+#     withusercolors = False
+#     with_diversity_background = False
+#     loadembedding = False
+#     bgcolor = "white"
+
+#     for opt, arg in opts:
+#         if opt in ("-e", "--scalingpertaxlevel"):
+#             withscaling = True
+#         elif opt in ("-p", "--print_figure"):
+#             print_figure = True
+#         elif opt in ("-s", "--with_diversity_background"):
+#             with_diversity_background = True
+#         elif opt in ("-c", "--scatterbgcolor"):
+#             bgcolor = str(arg)
+#         elif opt in ("-a", "--asvcolors"):
+#             withusercolors = True
+#         elif opt in ("-l", "--loadembedding"):
+#             loadembedding = True
+
+#     _ = taxumap_legacy(
+#         agg_levels,
+#         withscaling,
+#         distanceperlevel,
+#         distancemetric,
+#         print_figure,
+#         withusercolors=withusercolors,
+#         print_with_diversity=with_diversity_background,
+#         loadembedding=loadembedding,
+#         bgcolor=bgcolor,
+#         save_embedding=True,
+#     )
+
+
 if __name__ == "__main__":
-    import sys, getopt
+    """Please use a '/' delimiter for weight and agg_levels"""
+    import argparse
 
-    """
-    use with options:
+    # argv = sys.argv[1:]
+    # print(argv)
 
-    -e OR WITH --scalingpertaxlevel
-    -p OR WITH --print_figure
-    -s OR WITH --with_diversity_background
-    -a OR --asvcolors 
-    -c OR --scatterbgcolor : a valid matplotlib color for the background of the scatter plot, default: white
-    -l OR --loadembedding : load already calculated embedding from result/embedding.csv
-    """
-    argv = sys.argv[1:]
-    try:
-        opts, args = getopt.getopt(
-            argv,
-            "epsalc:",
-            [
-                "scalingpertaxlevel",
-                "print_figure",
-                "with_diversity_background",
-                "asvcolors",
-                "loadembedding",
-                "scatterbgcolor=",
-            ],
-        )
+    # opts, args = getopt.getopt(argv, "dwa:", ["dir", "weight", "agg_levels"])
+    # print(opts)
 
-    except getopt.GetoptError:
-        sys.exit("unknown options")
+    parser = argparse.ArgumentParser(description="Get options for taxumap run")
+    parser.add_argument("-m", "--microbiota_data", help="Microbiota (Taxonomy) Table")
+    parser.add_argument("-t", "--taxonomy", help="Taxonomy Meta Table")
+    parser.add_argument("-w", "--weight", help="Weights")
+    parser.add_argument("-a", "--agg_levels", help="Aggregation Levels")
 
-    agg_levels = None
-    withscaling = False
-    distanceperlevel = False
-    distancemetric = "braycurtis"
-    print_figure = False
-    distanceperlevel = False
-    withusercolors = False
-    with_diversity_background = False
-    loadembedding = False
-    bgcolor = "white"
+    args = parser.parse_args()
 
-    for opt, arg in opts:
-        if opt in ("-e", "--scalingpertaxlevel"):
-            withscaling = True
-        elif opt in ("-p", "--print_figure"):
-            print_figure = True
-        elif opt in ("-s", "--with_diversity_background"):
-            with_diversity_background = True
-        elif opt in ("-c", "--scatterbgcolor"):
-            bgcolor = str(arg)
-        elif opt in ("-a", "--asvcolors"):
-            withusercolors = True
-        elif opt in ("-l", "--loadembedding"):
-            loadembedding = True
+    # try:
+    #     agg_levels = list(map(lambda x: x.capitalize(), args.agg_levels.split("/")))
+    # except AttributeError:
+    #     agg_levels = args.agg_levels
 
-    _ = taxumap_legacy(
-        agg_levels,
-        withscaling,
-        distanceperlevel,
-        distancemetric,
-        print_figure,
-        withusercolors=withusercolors,
-        print_with_diversity=with_diversity_background,
-        loadembedding=loadembedding,
-        bgcolor=bgcolor,
-        save_embedding=True,
-    )
+    # AGG_LEVELS
+    if args.agg_levels is not None:
+        agg_levels = list(map(lambda x: x.capitalize(), args.agg_levels.split("/")))
+    else:
+        agg_levels = args.agg_levels
+
+    # WEIGHT
+    if args.weight is not None:
+        weights = args.weight.split("/")
+        weights = list(map(lambda x: int(x), weights))
+    else:
+        weights = args.weight
+
+    # TAX META
+    if args.taxonomy is not None:
+        fpt = args.taxonomy
+    else:
+        fpt = "./data/taxonomy.csv"
+
+    # TAXONOMY
+    if args.microbiota_data is not None:
+        fpx = args.microbiota_data
+    else:
+        fpx = "./data/microbiota_table.csv"
+
+    t = Taxumap(agg_levels=agg_levels, weight=weights, fpt=fpt, fpx=fpx)
+    t.transform()
