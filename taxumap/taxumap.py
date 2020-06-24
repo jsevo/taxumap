@@ -24,6 +24,8 @@ from umap import UMAP
 
 
 class Taxumap:
+    """Taxumap object for running taxUMAP algorithm"""
+
     def __init__(
         self,
         agg_levels=["Phylum", "Family"],
@@ -34,6 +36,18 @@ class Taxumap:
         fpx=None,
         name=None,
     ):
+
+        """Constructor method for the Taxumap object
+
+        Args:
+            agg_levels (list, optional): Determines which taxonomic levels to aggregate on. See taxUMAP documentation. Defaults to ["Phylum", "Family"].
+            weight (list of int, optional): Determines the weight of each of the agg_levels. Length of this list must match length of agg_levels. Defaults to None.
+            taxonomy (dataframe, optional): Compositional data (relative counts) of abundance of ASV/OTU. Defaults to None.
+            taxonomy_meta (dataframe, optional): Dataframe with index of ASV/OTU and columns representing decsending taxonomic levels. Defaults to None.
+            fpt (str, optional): Filepath to the taxonomy meta dataframe, if saved on disk. Defaults to None.
+            fpx (str, optional): Filepath to the taxonomy dataframe, if saved on disk. Defaults to None.
+            name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
+        """
 
         self.agg_levels = agg_levels
 
@@ -136,6 +150,7 @@ class Taxumap:
 
     @property
     def _embedded_csv_name(self):
+        """Filename for saving self.embedded to a csv file. Uses self.name if available."""
         if isinstance(self.name, str):
             return "_".join([self.name, "embedded.csv"])
         else:
@@ -143,12 +158,21 @@ class Taxumap:
 
     @property
     def _embedded_pickle_name(self):
+        """Filename for saving self to a pickle. Uses self.name if available."""
         if isinstance(self.name, str):
             return "_".join([self.name, "taxumap_pickle.pickle"])
         else:
             return "taxumap_pickle.pickle"
 
     def transform(self, debug=False, save=False, outdir=None, pickle=False):
+        """If taxonomy and taxonomy_meta dataframes are available, will run the taxUMAP transformation.
+
+        Args:
+            debug (bool, optional): If True, self will be given X and Xscaled variables (debug only). Defaults to False.
+            save (bool, optional): If True, will attempt to save the resulting embedded as a csv file. Defaults to False.
+            outdir (str, optional): Path to where files should be saved, if save=True. Defaults to None.
+            pickle (bool, optional): If True, will save self object as a pickle. Defaults to False.
+        """
 
         # I hard-coded distanceperlevel for now.
         Xagg = taxonomic_aggregation(
@@ -202,6 +226,7 @@ class Taxumap:
         return self
 
     def save_it(self, outdir=None, pickle=False):
+        # TODO: Make it so that if pickle=True, it saves only pickle
 
         if outdir is None:
             print("Saving to ./results")
@@ -508,77 +533,6 @@ def taxumap_legacy(
         return (TAXUMAP, X_embedded, Xscaled, X)
     else:
         return (TAXUMAP, X_embedded)
-
-
-# if __name__ == "__main__":
-#     import sys, getopt
-
-#     """
-#     use with options:
-
-#     -e OR WITH --scalingpertaxlevel
-#     -p OR WITH --print_figure
-#     -s OR WITH --with_diversity_background
-#     -a OR --asvcolors
-#     -c OR --scatterbgcolor : a valid matplotlib color for the background of the scatter plot, default: white
-#     -l OR --loadembedding : load already calculated embedding from result/embedding.csv
-#     """
-#     argv = sys.argv[1:]
-
-#     try:
-#         opts, args = getopt.getopt(
-#             argv,
-#             "epsalc:",
-#             [
-#                 "scalingpertaxlevel",
-#                 "print_figure",
-#                 "with_diversity_background",
-#                 "asvcolors",
-#                 "loadembedding",
-#                 "scatterbgcolor=",
-#             ],
-#         )
-
-#     except getopt.GetoptError:
-#         sys.exit("unknown options")
-
-#     agg_levels = None
-#     withscaling = False
-#     distanceperlevel = False
-#     distancemetric = "braycurtis"
-#     print_figure = False
-#     distanceperlevel = False
-#     withusercolors = False
-#     with_diversity_background = False
-#     loadembedding = False
-#     bgcolor = "white"
-
-#     for opt, arg in opts:
-#         if opt in ("-e", "--scalingpertaxlevel"):
-#             withscaling = True
-#         elif opt in ("-p", "--print_figure"):
-#             print_figure = True
-#         elif opt in ("-s", "--with_diversity_background"):
-#             with_diversity_background = True
-#         elif opt in ("-c", "--scatterbgcolor"):
-#             bgcolor = str(arg)
-#         elif opt in ("-a", "--asvcolors"):
-#             withusercolors = True
-#         elif opt in ("-l", "--loadembedding"):
-#             loadembedding = True
-
-#     _ = taxumap_legacy(
-#         agg_levels,
-#         withscaling,
-#         distanceperlevel,
-#         distancemetric,
-#         print_figure,
-#         withusercolors=withusercolors,
-#         print_with_diversity=with_diversity_background,
-#         loadembedding=loadembedding,
-#         bgcolor=bgcolor,
-#         save_embedding=True,
-#     )
 
 
 if __name__ == "__main__":
