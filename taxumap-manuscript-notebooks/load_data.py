@@ -113,7 +113,7 @@ for n in tree_rooted.traverse(include_self=False):
     
 
 
-load_distances=True    
+load_distances=False    
 if load_distances:
     
     unweightedunifrac_distances = pd.read_csv("results/unweighted_unifrac_dist.csv", index_col = "SampleID")

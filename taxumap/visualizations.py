@@ -208,8 +208,8 @@ def pretty_print(
 
     ax.set_yticks([])
     ax.set_xticks([])
-    ax.set_ylabel("phyUMAP-2")
-    ax.set_xlabel("phyUMAP-1")
+    ax.set_ylabel("TaxUMAP-2")
+    ax.set_xlabel("TaxUMAP-1")
     sns.despine()
     try:
         plt.gcf().savefig("results/projection.pdf", dpi=250, bbox_inches="tight")
@@ -231,32 +231,68 @@ def pretty_print(
         print("Not saving figure. Unknown error.")
         pass
 
-
 def scatter_plot_with_colors(embedding, colors, legend_items = [], bgcolor="white",
-                             scatter_alpha=1., fig=None, ax=None):
+                             scatter_alpha=1.,s=1, fig=None, ax=None,ax2=None, figsize=(5,5),
+                             fontsize=8, marker="o"):
     ##set up figure
     import matplotlib.pyplot as plt
     import seaborn as sns
+    import matplotlib.gridspec as gridspec
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
     if fig is None:
         plt.close("all")
-        fig, ax = plt.subplots(figsize=(5, 5))
+        fig = plt.figure(figsize=figsize)
+        gs = fig.add_gridspec(10, 1)
+        ax = fig.add_subplot(gs[:-1, :])
+        #ax2 = inset_axes(ax, width="20%", height="10%", loc=5)
+        ax2 = fig.add_subplot(gs[-1, :])
 
-    ax.scatter(
-            embedding[:, 0],
-            embedding[:, 1],
-            c = colors,
-            alpha=scatter_alpha,
-            s=3,
-            marker="o",
-            rasterized=True,
-        )
-    ax.set_yticks([])
-    ax.set_xticks([])
-    ax.set_ylabel("phyUMAP-2")
-    ax.set_xlabel("phyUMAP-1")
+
+        ax.scatter(
+                embedding[:, 0],
+                embedding[:, 1],
+                edgecolors = "none",
+                facecolors=colors,
+                alpha=scatter_alpha,
+                s=s,
+                marker=marker,
+                zorder=0
+            )
+    else:
+
+        ax.scatter(
+                embedding[:, 0],
+                embedding[:, 1],
+                edgecolors = "none",
+                facecolors=colors,
+                alpha=scatter_alpha,
+                s=s,
+                marker=marker,
+            )
+
+    ax.axis('equal')
+    ax.set_ylabel("TaxUMAP-2", fontsize=fontsize)
+    ax.set_xlabel("TaxUMAP-1", fontsize=fontsize)
     ax.set_facecolor(bgcolor)
-    sns.despine(trim=True, offset=5)
-    return(fig, ax)
+   # ax.secondary_xaxis('top', functions=(deg2rad, rad2deg))
+
+
+#    ax.spines["top"].set_position(ax.spines['bottom'].get_position())
+    ax.xaxis.set_label_position("top")
+    ax.xaxis.tick_top()
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+
+    sns.despine(trim=True,top=False, bottom=False, ax=ax,
+                offset=5)
+
+    ax.spines["bottom"].set_visible(False)
+
+    ax2.set_yticks([])
+
+
+    return(fig, ax, ax2)
+
 
 
