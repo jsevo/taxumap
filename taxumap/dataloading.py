@@ -38,8 +38,7 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
             X.set_index(idx_col, inplace=True)
             X = X.astype(np.float64)
 
-            if not np.allclose(X.sum(axis=1), 1):
-                warnings.warn("rows do not sum to 1. Is this intentional?")
+            check_if_compositional(X, name="microbiota (rel_abundances)")
 
             return X.fillna(0)
 
@@ -52,6 +51,15 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
             print(
                 "An unknown error occurred during microbiota_table parsing. Please see the instructions for how to run taxumap."
             )
+
+
+def check_if_compositional(X, name=""):
+    if not np.allclose(X.sum(axis=1), 1):
+        warnings.warn(
+            "Rows in the {} dataframe do not sum to 1. Is this intentional?".format(
+                name
+            )
+        )
 
 
 def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):

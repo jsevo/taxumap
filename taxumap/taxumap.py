@@ -68,6 +68,9 @@ class Taxumap:
                 print("Recognized `rel_abundances` parameter as Pandas DataFrame")
                 self.fpx = None
                 self.rel_abundances = rel_abundances
+                parse.check_if_compositional(
+                    rel_abundaces, name="locally-supplied microbiota (rel_abundances)"
+                )
             elif isinstance(fpx, str):
                 self.fpx = fpx
                 self.rel_abundances = parse.parse_microbiome_data(fpx)
