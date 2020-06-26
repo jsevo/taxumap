@@ -30,8 +30,8 @@ class Taxumap:
         self,
         agg_levels=["Phylum", "Family"],
         weight=None,
+        rel_abundances=None,
         taxonomy=None,
-        taxonomy_meta=None,
         fpt=None,
         fpx=None,
         name=None,
@@ -42,10 +42,10 @@ class Taxumap:
         Args:
             agg_levels (list, optional): Determines which taxonomic levels to aggregate on. See taxUMAP documentation. Defaults to ["Phylum", "Family"].
             weight (list of int, optional): Determines the weight of each of the agg_levels. Length of this list must match length of agg_levels. Defaults to None.
-            taxonomy (dataframe, optional): Compositional data (relative counts) of abundance of ASV/OTU. Defaults to None.
-            taxonomy_meta (dataframe, optional): Dataframe with index of ASV/OTU and columns representing decsending taxonomic levels. Defaults to None.
-            fpt (str, optional): Filepath to the taxonomy meta dataframe, if saved on disk. Defaults to None.
-            fpx (str, optional): Filepath to the taxonomy dataframe, if saved on disk. Defaults to None.
+            rel_abundances (dataframe, optional): Compositional data (relative counts) of abundance of ASV/OTU. Defaults to None.
+            taxonomy (dataframe, optional): Dataframe with index of ASV/OTU and columns representing decsending taxonomic levels. Defaults to None.
+            fpt (str, optional): Filepath to the rel_abundances meta dataframe, if saved on disk. Defaults to None.
+            fpx (str, optional): Filepath to the rel_abundances dataframe, if saved on disk. Defaults to None.
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
         """
 
@@ -59,40 +59,40 @@ class Taxumap:
             # TODO: Input checks
             self.weight = weight
 
+        # Set rel_abundances df
+        try:
+            if rel_abundances is None and fpx is None:
+                raise ValueError
+            elif isinstance(rel_abundances, pd.DataFrame):
+                # TODO: Check rel_abundances df for validity
+                print("Recognized `rel_abundances` parameter as Pandas DataFrame")
+                self.fpx = None
+                self.rel_abundances = rel_abundances
+            elif isinstance(fpx, str):
+                self.fpx = fpx
+                self.rel_abundances = parse.parse_microbiome_data(fpx)
+            else:
+                raise NameError
+        except (ValueError, NameError) as e:
+            _name_value_error(e, "fpx", "rel_abundances")
+            raise
+
         # Set taxonomy df
         try:
-            if taxonomy is None and fpx is None:
+            if taxonomy is None and fpt is None:
                 raise ValueError
             elif isinstance(taxonomy, pd.DataFrame):
                 # TODO: Check taxonomy df for validity
                 print("Recognized `taxonomy` parameter as Pandas DataFrame")
-                self.fpx = None
-                self.taxonomy = taxonomy
-            elif isinstance(fpx, str):
-                self.fpx = fpx
-                self.taxonomy = parse.parse_microbiome_data(fpx)
-            else:
-                raise NameError
-        except (ValueError, NameError) as e:
-            _name_value_error(e, "fpx", "taxonomy")
-            raise
-
-        # Set taxonomy_meta df
-        try:
-            if taxonomy_meta is None and fpt is None:
-                raise ValueError
-            elif isinstance(taxonomy_meta, pd.DataFrame):
-                # TODO: Check taxonomy_meta df for validity
-                print("Recognized `taxonomy_meta` parameter as Pandas DataFrame")
                 self.fpt = None
-                self.taxonomy_meta = taxonomy_meta
+                self.rel_abundance_meta = taxonomy
             elif isinstance(fpx, str):
                 self.fpt = fpt
-                self.taxonomy_meta = parse.parse_taxonomy_data(fpt)
+                self.rel_abundance_meta = parse.parse_taxonomy_data(fpt)
             else:
                 raise NameError
         except (ValueError, NameError) as e:
-            _name_value_error(e, "fpt", "taxonomy_meta")
+            _name_value_error(e, "fpt", "taxonomy")
             raise
 
         if isinstance(name, str):
@@ -102,7 +102,7 @@ class Taxumap:
 
     @property
     def _exist_tax_meta_df(self):
-        return isinstance(self.taxonomy_meta, pd.DataFrame)
+        return isinstance(self.rel_abundance_meta, pd.DataFrame)
 
     @property
     def _exist_tax_meta_fp(self):
@@ -116,7 +116,7 @@ class Taxumap:
 
     @property
     def _exist_tax_df(self):
-        return isinstance(self.taxonomy, pd.DataFrame)
+        return isinstance(self.rel_abundances, pd.DataFrame)
 
     @property
     def _exist_tax_fp(self):
@@ -164,8 +164,8 @@ class Taxumap:
         else:
             return "taxumap_pickle.pickle"
 
-    def transform(self, debug=False, save=False, outdir=None, pickle=False):
-        """If taxonomy and taxonomy_meta dataframes are available, will run the taxUMAP transformation.
+    def transform_self(self, debug=False, save=False, outdir=None, pickle=False):
+        """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
 
         Args:
             debug (bool, optional): If True, self will be given X and Xscaled variables (debug only). Defaults to False.
@@ -176,7 +176,10 @@ class Taxumap:
 
         # I hard-coded distanceperlevel for now.
         Xagg = taxonomic_aggregation(
-            self.taxonomy, self.taxonomy_meta, self.agg_levels, distanceperlevel=False
+            self.rel_abundances,
+            self.rel_abundance_meta,
+            self.agg_levels,
+            distanceperlevel=False,
         )
 
         # I hard-coded scaling for now.
@@ -244,7 +247,7 @@ class Taxumap:
         except AttributeError as e:
             print(e)
             print(
-                "\nEmbedding not currently populated. Please run taxumap.Taxumap.transform(save=True).\n"
+                "\nEmbedding not currently populated. Please run taxumap.Taxumap.transform_self(save=True).\n"
             )
         except Exception as e:
             throw_unknown_save_error(e)
@@ -258,7 +261,7 @@ class Taxumap:
     def __repr__(self):
 
         if self._is_df_loaded:
-            return "Taxumap(agg_levels = {}, weight = {}, taxonomy = '{}', taxonomy_meta = '{}')".format(
+            return "Taxumap(agg_levels = {}, weight = {}, rel_abundances = '{}', taxonomy = '{}')".format(
                 self.agg_levels,
                 self.weight,
                 "loaded from local scope",
@@ -289,13 +292,13 @@ class Taxumap:
 
         if self._is_df_loaded:
             messages.append(
-                "The `taxonomy` and `taxonomy_meta` dataframes were passed in from local variables."
+                "The `rel_abundances` and `taxonomy` dataframes were passed in from local variables."
             )
             return "\n \n".join(messages)
 
         elif self._is_fp_loaded:
             messages.append(
-                "The taxonomy and taxonomy_meta dataframes were generated from files located at\n'{}'\nand\n'{}',\nrespectively".format(
+                "The rel_abundances and taxonomy dataframes were generated from files located at\n'{}'\nand\n'{}',\nrespectively".format(
                     self.fpx, self.fpt
                 )
             )
@@ -539,15 +542,11 @@ if __name__ == "__main__":
     """Please use a '/' delimiter for weight and agg_levels"""
     import argparse
 
-    # argv = sys.argv[1:]
-    # print(argv)
-
-    # opts, args = getopt.getopt(argv, "dwa:", ["dir", "weight", "agg_levels"])
-    # print(opts)
-
     parser = argparse.ArgumentParser(description="Get options for taxumap run")
-    parser.add_argument("-m", "--microbiota_data", help="Microbiota (Taxonomy) Table")
-    parser.add_argument("-t", "--taxonomy", help="Taxonomy Meta Table")
+    parser.add_argument(
+        "-m", "--microbiota_data", help="Microbiota (rel_abundances) Table"
+    )
+    parser.add_argument("-t", "--taxonomy", help="Taxonomy Table")
     parser.add_argument("-w", "--weight", help="Weights")
     parser.add_argument("-a", "--agg_levels", help="Aggregation Levels")
 
@@ -577,11 +576,13 @@ if __name__ == "__main__":
     else:
         fpt = "./data/taxonomy.csv"
 
-    # TAXONOMY
+    # rel_abundances
     if args.microbiota_data is not None:
         fpx = args.microbiota_data
     else:
         fpx = "./data/microbiota_table.csv"
 
     t = Taxumap(agg_levels=agg_levels, weight=weights, fpt=fpt, fpx=fpx)
-    t.transform()
+
+    # TODO: opt to ask for saving, default yes
+    t.transform_self()

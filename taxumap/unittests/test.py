@@ -47,15 +47,15 @@ class TestTaxumap(unittest.TestCase):
             name="test2_transformed",
         )
 
-        self.t2.transform()
+        self.t2.transform_self()
 
     def test_interactive_loading(self):
 
         with self.assertRaises(NameError):
-            t.Taxumap(taxonomy={}, taxonomy_meta={})
+            t.Taxumap(rel_abundances={}, taxonomy={})
 
         with self.assertRaises(ValueError):
-            t.Taxumap(taxonomy=None, taxonomy_meta=None)
+            t.Taxumap(rel_abundances=None, taxonomy=None)
 
         self.assertIsNone(self.broke_name.name)
 
