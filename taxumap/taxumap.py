@@ -88,10 +88,10 @@ class Taxumap:
                 # TODO: Check taxonomy df for validity
                 print("Recognized `taxonomy` parameter as Pandas DataFrame")
                 self.fpt = None
-                self.rel_abundance_meta = taxonomy
+                self.taxonomy = taxonomy
             elif isinstance(fpx, str):
                 self.fpt = fpt
-                self.rel_abundance_meta = parse.parse_taxonomy_data(fpt)
+                self.taxonomy = parse.parse_taxonomy_data(fpt)
             else:
                 raise NameError
         except (ValueError, NameError) as e:
@@ -105,7 +105,7 @@ class Taxumap:
 
     @property
     def _exist_tax_meta_df(self):
-        return isinstance(self.rel_abundance_meta, pd.DataFrame)
+        return isinstance(self.taxonomy, pd.DataFrame)
 
     @property
     def _exist_tax_meta_fp(self):
@@ -179,10 +179,7 @@ class Taxumap:
 
         # I hard-coded distanceperlevel for now.
         Xagg = taxonomic_aggregation(
-            self.rel_abundances,
-            self.rel_abundance_meta,
-            self.agg_levels,
-            distanceperlevel=False,
+            self.rel_abundances, self.taxonomy, self.agg_levels, distanceperlevel=False,
         )
 
         # I hard-coded scaling for now.
@@ -197,6 +194,7 @@ class Taxumap:
         self.taxumap = UMAP(
             n_neighbors=neigh, min_dist=min_dist, metric=distance_metric
         ).fit(Xscaled)
+
         self.embedding = self.taxumap.transform(Xscaled)
         self.index = Xscaled.index
 
@@ -343,13 +341,14 @@ def taxonomic_aggregation(
     assert (type(agg_levels) == list) | (
         agg_levels == None
     ), "Aborting: agg_levels should be a list of taxonomic levels or explicitly `None`"
-    import numpy as np
 
     if agg_levels == None:
         try:
             assert (
-                len(tax.columns) > 3
+                len(tax.columns) < 3
             ), "the taxonomy table has very few columns. Cannot aggregate taxonomic levels. Reverting to regular UMAP"
+
+            # Automaticaly get the second and second-to-last agg_levels
             agg_levels = np.array(tax.columns)[[1, -2]]
             print(agg_levels)
             if agg_levels[0] == agg_levels[1]:
@@ -375,6 +374,8 @@ def taxonomic_aggregation(
             print("aggregating on %s" % l)
             Xagg = tls.aggregate_at_taxlevel(_X, tax, l)
             X = X.join(Xagg, lsuffix="_r")
+
+        # Check to see if data was aggregated properly
         assert np.allclose(_X.sum(axis=1), X.sum(axis=1) / (len(agg_levels) + 1)), (
             "During aggregation, the sum of relative abundances is not equal to %d-times the original relative abundances. This would have been expected due to aggregating and joining"
             % ((len(agg_levels) + 1))
