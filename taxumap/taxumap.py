@@ -248,9 +248,16 @@ class Taxumap:
 
         return df_final
 
-    def transform_self(
-        self, scale=False, debug=False, save=False, outdir=None, pickle=False
-    ):
+    def pickle(self, outdir):
+
+        import pickle
+
+        with open(os.path.join(outdir, self._embedded_pickle_name), "wb") as f:
+            pickle.dump(self, f)
+
+        return self
+
+    def transform_self(self, scale=False, debug=False, save=False, outdir=None):
         """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
 
         Args:
@@ -287,47 +294,14 @@ class Taxumap:
             self.Xagg = Xagg
 
         if save:
-            try:
-                outdir = Path(outdir).resolve(strict=True)
-            except (FileNotFoundError, TypeError) as e:
-                print(e)
-                print(
-                    '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
-                )
-                outdir = Path("./results").resolve()
-            except Exception as e:
-                throw_unknown_save_error(e)
+            self.save_embedding(outdir=outdir)
 
-            if outdir.is_dir():
-                self.save_it(outdir, pickle)
-            else:
-                try:
-                    os.mkdir(outdir)
-                except FileExistsError as e:
-                    print(e)
-                    print(
-                        '\nUnable to automatically save embedding, most likely do to a file called "results" in your PWD.\n'
-                    )
-                    sys.exit(2)
-                else:
-                    self.save_it(outdir, pickle)
         return self
 
-    def save_it(self, outdir=None, pickle=False):
-
-        if outdir is None:
-            print("Saving to ./results")
-            outdir = Path("./results").resolve()
-            try:
-                os.mkdir(outdir)
-                print("Making ./results folder...")
-            except FileExistsError:
-                print("./results folder already exists")
+    def save_embedding(self, outdir=None):
 
         try:
-            pd.DataFrame(
-                self.embedding, columns=["taxUMAP1", "taxUMAP2"], index=self.index
-            ).to_csv(os.path.join(outdir, self._embedded_csv_name))
+            _save(self.df_embedding.to_csv, outdir, self._embedded_csv_name)
         except AttributeError as e:
             print(e)
             print(
@@ -335,14 +309,10 @@ class Taxumap:
             )
         except Exception as e:
             throw_unknown_save_error(e)
-        else:
-            if pickle:
-                import pickle
 
-                with open(os.path.join(outdir, self._embedded_pickle_name), "wb") as f:
-                    pickle.dump(self, f)
+        return self
 
-    def scatter(self, figsize=(16, 10), save=False, **kwargs):
+    def scatter(self, figsize=(16, 10), save=False, outdir=None, **kwargs):
 
         if not self._is_transformed:
             raise AttributeError(
@@ -360,6 +330,8 @@ class Taxumap:
         ax.set_ylabel(self.taxumap2)
 
         sns.despine()
+        if save:
+            _save(fig.savefig, outdir, "plot.png")
 
         return fig, ax
 
@@ -411,6 +383,38 @@ class Taxumap:
 
         else:
             return repr(self)
+
+
+def _save(fxn, outdir, filename, **kwargs):
+
+    if not callable(fxn):
+        raise TypeError("'fxn' passed is not callable")
+
+    if outdir is not None:
+        try:
+            outdir = Path(outdir).resolve(strict=True)
+        except (FileNotFoundError, TypeError) as e:
+            print(e)
+            print(
+                '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
+            )
+
+    elif outdir is None:
+        outdir = Path("./results").resolve()
+        try:
+            os.mkdir(outdir)
+            print("Making ./results folder...")
+        except FileExistsError:
+            print("./results folder already exists")
+        except Exception as e:
+            throw_unknown_save_error(e)
+            sys.exit(2)
+    try:
+        fxn(os.path.join(outdir, filename), **kwargs)
+    except Exception as e:
+        throw_unknown_save_error(e)
+    else:
+        print("Save successful")
 
 
 def throw_unknown_save_error(e):
