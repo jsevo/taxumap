@@ -49,7 +49,7 @@ class Taxumap:
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
         """
 
-        self.agg_levels = agg_levels
+        self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
         # I am pretty sure that my use of If...Else below violates the EAFP principles - should use Try..Except instead
 
@@ -58,8 +58,7 @@ class Taxumap:
         else:
             if len(weight) != len(agg_levels):
                 raise ValueError(
-                    "The length of
-                     the weight must match that of agg_levels"
+                    "The length of the weight must match that of agg_levels"
                 )
             else:
                 self.weight = weight
@@ -69,7 +68,6 @@ class Taxumap:
             if rel_abundances is None and fpx is None:
                 raise ValueError
             elif isinstance(rel_abundances, pd.DataFrame):
-                # TODO: Check rel_abundances df for validity
                 print("Recognized `rel_abundances` parameter as Pandas DataFrame")
                 self.fpx = None
                 self.rel_abundances = rel_abundances
@@ -90,10 +88,11 @@ class Taxumap:
             if taxonomy is None and fpt is None:
                 raise ValueError
             elif isinstance(taxonomy, pd.DataFrame):
-                # TODO: Check taxonomy df for validity
                 print("Recognized `taxonomy` parameter as Pandas DataFrame")
                 self.fpt = None
                 self.taxonomy = taxonomy
+                self.taxonomy.columns = map(str.capitalize, self.taxonomy.columns)
+                parse.check_tax_is_consistent(self.taxonomy)
             elif isinstance(fpx, str):
                 self.fpt = fpt
                 self.taxonomy = parse.parse_taxonomy_data(fpt)

@@ -73,6 +73,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
 
     try:
 
+        # See if supplied file exists
         try:
             fp = fp.resolve(strict=True)
 
@@ -88,6 +89,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
             )
             sys.exit(2)
 
+        # Read file into Pandas df
         try:
             tax = pd.read_csv(fp)
 
@@ -107,6 +109,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
             )
             sys.exit(2)
 
+        # Set index to ASV/OTU
         try:
 
             idx_lowest_level = tax.columns[
@@ -115,29 +118,33 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
 
             tax.set_index(idx_lowest_level.to_list(), inplace=True)
 
+            tax.columns = map(str.capitalize, tax.columns)
+
         except ValueError as e:
             print(e)
             print("ASV/OTU not found in your columns")
             sys.exit(2)
 
         else:
-
-            if np.any(tax.isna()):
-                warnings.warn(
-                    "Missing values (NaN) found for some taxonomy levels, you should consider filling with higher taxonomic level names. Please consult the documentation for best way to move forward."
-                )
-
-            # should we just read_csv() and only allow certain datatypes (i.e. str, obj?)
-            if any(tax.dtypes == (int, float)):
-                warnings.warn(
-                    "Your taxonomy table contains columns may contain numerical data. Please consult documentation because you may have incorrectly formatted your dataframe."
-                )
-
+            check_tax_is_consistent(tax)
             return tax
 
     except:
         print(
             "An unknown error occurred during taxonomy table parsing. Please see the documentation for how to run taxumap."
+        )
+
+
+def check_tax_is_consistent(df):
+    if np.any(df.isna()):
+        warnings.warn(
+            "Missing values (NaN) found for some taxonomy levels, you should consider filling with higher taxonomic level names. Please consult the documentation for best way to move forward."
+        )
+
+    # should we just read_csv() and only allow certain datatypes (i.e. str, obj?)
+    if any(df.dtypes == (int, float)):
+        warnings.warn(
+            "Your taxonomy table contains columns may contain numerical data. Please consult documentation because you may have incorrectly formatted your dataframe."
         )
 
 
