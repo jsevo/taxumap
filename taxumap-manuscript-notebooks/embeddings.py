@@ -3,7 +3,7 @@ from sklearn.decomposition import PCA, KernelPCA
 from umap import UMAP
 from sklearn.preprocessing import MinMaxScaler
 
-RUNEMBEDDINGS = False
+RUNEMBEDDINGS = True 
 if RUNEMBEDDINGS:
     #simple PCA
     pcaembedding = PCA(n_components=2).fit_transform(XASV.fillna(0))
@@ -18,7 +18,7 @@ if RUNEMBEDDINGS:
     # embedding_non_phylo_scaled = UMAP(n_neighbors=120,min_dist=0.2, metric="manhattan").fit_transform(MinMaxScaler().fit_transform(XASV))
 
 
-RUNTAXUMAPS = False
+RUNTAXUMAPS = True 
 if RUNTAXUMAPS: 
     from taxumap.taxumap import taxumap
     agg_levels = ["Phylum", "Family"]
@@ -32,17 +32,17 @@ if RUNTAXUMAPS:
     withusercolors=taxonomy_meta[["HexColor"]]
 
 
-#     TAXUMAP, X_embedded, taxumap_Xscaled, taxumap_X = taxumap(agg_levels,
-#                      withscaling,
-#                      distanceperlevel,
-#                      distancemetric,
-#                      printfigure,
-#                      printwithdiversity,
-#                      X_in,
-#                      tax,
-#                      withusercolors,
-#                      debug=True, #return tables
-#                      save_embedding=False #save xy coordinates
+    TAXUMAP, X_embedded, taxumap_Xscaled, taxumap_X = taxumap(agg_levels,
+                     withscaling,
+                     distanceperlevel,
+                     distancemetric,
+                     printfigure,
+                     printwithdiversity,
+                     X_in,
+                     tax,
+                     withusercolors,
+                     debug=True, #return tables
+                     save_embedding=True#save xy coordinates
 #                                                              );
     
     TAXUMAP_alllevels, X_embedded_alllevels, taxumap_Xscaled_alllevels, taxumap_X_alllevels = taxumap(["Phylum", "Class", "Order", "Family", "Genus"],
