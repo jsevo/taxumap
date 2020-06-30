@@ -76,33 +76,65 @@ XASV = X.set_index("SampleID")[[x for x in X.columns if "ASV_" in x]]
 
 
 ########################################
-scatter_meta_data = pd.read_csv("/Users/schluj05/data/MSKCCDATA/meta_data_for_scatter_jitter_volatility.csv", index_col="Sample.ID",   )
-scatter_meta_data.index.name="SampleID"
-scatter_meta_data.drop(columns=["Unnamed: 0", "Unnamed: 0.1", "phylo-UMAP1", "phylo-UMAP2", "kernelPCA1", "kernelPCA2", "asvUMAP2", "asvUMAP1","asvSCALEDUMAP1","asvSCALEDUMAP1.1", "tsne0", "tsne1"], inplace=True)
+scatter_meta_data = pd.read_csv(
+    "/Users/schluj05/data/MSKCCDATA/meta_data_for_scatter_jitter_volatility.csv",
+    index_col="Sample.ID",
+)
+scatter_meta_data.index.name = "SampleID"
+scatter_meta_data.drop(
+    columns=[
+        "Unnamed: 0",
+        "Unnamed: 0.1",
+        "phylo-UMAP1",
+        "phylo-UMAP2",
+        "kernelPCA1",
+        "kernelPCA2",
+        "asvUMAP2",
+        "asvUMAP1",
+        "asvSCALEDUMAP1",
+        "asvSCALEDUMAP1.1",
+        "tsne0",
+        "tsne1",
+    ],
+    inplace=True,
+)
 scatter_meta_data = scatter_meta_data.drop_duplicates()
 scatter_meta_data = samples.set_index("SampleID").join(scatter_meta_data)
 scatter_meta_data = scatter_meta_data.loc[XASV.index]
-scatter_meta_data = pd.merge_asof(scatter_meta_data.reset_index().sort_values("Timepoint"), hct_meta.sort_values("TimepointOfTransplant"), left_on = "Timepoint", right_on="TimepointOfTransplant", by="PatientID", direction="nearest", )
+scatter_meta_data = pd.merge_asof(
+    scatter_meta_data.reset_index().sort_values("Timepoint"),
+    hct_meta.sort_values("TimepointOfTransplant"),
+    left_on="Timepoint",
+    right_on="TimepointOfTransplant",
+    by="PatientID",
+    direction="nearest",
+)
 scatter_meta_data = scatter_meta_data.set_index("SampleID")
 
 # clincal phases
 scatter_meta_data["Phase"] = 1
-peri_engraftment = (scatter_meta_data.DayRelativeToNearestTransplantDay < scatter_meta_data.EngraftmentDayRelativeToNearestTransplantDay) & (scatter_meta_data.DayRelativeToNearestTransplantDay >=0)
-post_engraftment = scatter_meta_data.DayRelativeToNearestTransplantDay > scatter_meta_data.EngraftmentDayRelativeToNearestTransplantDay
+peri_engraftment = (
+    scatter_meta_data.DayRelativeToNearestTransplantDay
+    < scatter_meta_data.EngraftmentDayRelativeToNearestTransplantDay
+) & (scatter_meta_data.DayRelativeToNearestTransplantDay >= 0)
+post_engraftment = (
+    scatter_meta_data.DayRelativeToNearestTransplantDay
+    > scatter_meta_data.EngraftmentDayRelativeToNearestTransplantDay
+)
 scatter_meta_data.loc[peri_engraftment.values, "Phase"] = 2
 scatter_meta_data.loc[post_engraftment.values, "Phase"] = 3
-
 
 
 ########################################
 
 from skbio.tree import TreeNode
 from skbio.diversity import beta_diversity
-_tax = (taxonomy.loc[XASV.columns[0:100]])
+
+_tax = taxonomy.loc[XASV.columns[0:100]]
 _tax.index.name = "ASV"
-#_tax = _tax.reset_index()
-_tax = _tax[["Kingdom","Phylum", "Genus"]]
-lineages = {str(ix): r.to_list() for i, (ix,r) in enumerate(_tax.iterrows())}
+# _tax = _tax.reset_index()
+_tax = _tax[["Kingdom", "Phylum", "Genus"]]
+lineages = {str(ix): r.to_list() for i, (ix, r) in enumerate(_tax.iterrows())}
 tree = TreeNode.from_taxonomy(lineages.items())
 tree_rooted = tree.root_at(tree)
 
@@ -110,39 +142,45 @@ for n in tree.traverse(include_self=False):
     n.length = 1.0
 for n in tree_rooted.traverse(include_self=False):
     n.length = 1.0
-    
 
 
-load_distances=False    
+
+load_distances = True   
+
 if load_distances:
-    
-    unweightedunifrac_distances = pd.read_csv("results/unweighted_unifrac_dist.csv", index_col = "SampleID")
+
+    unweightedunifrac_distances = pd.read_csv(
+        "results/unweighted_unifrac_dist.csv", index_col="SampleID"
+    )
+
+    weightedunifrac_distances = pd.read_csv(
+        "results/weighted_unifrac_dist.csv", index_col="SampleID"
+    )
 
 
-
-    weightedunifrac_distances = pd.read_csv("results/weighted_unifrac_dist.csv", index_col = "SampleID")
-
-    
 else:
-    unweightedunifrac_distances = beta_diversity('unweighted_unifrac', 
-                   XASV.iloc[:,0:100].values*10000, 
-                   XASV.index.to_list(),
-                   otu_ids=XASV.columns[0:100].to_list(), 
-                   tree=tree_rooted,
-                   validate=True)
+    unweightedunifrac_distances = beta_diversity(
+        "unweighted_unifrac",
+        XASV.iloc[:, 0:100].values * 10000,
+        XASV.index.to_list(),
+        otu_ids=XASV.columns[0:100].to_list(),
+        tree=tree_rooted,
+        validate=True,
+    )
 
-    weightedunifrac_distances = beta_diversity('weighted_unifrac', 
-                   XASV.iloc[:,0:100].values*10000, 
-                   XASV.index.to_list(),
-                   otu_ids=XASV.columns[0:100].to_list(), 
-                   tree=tree_rooted,
-                   validate=True)
+    weightedunifrac_distances = beta_diversity(
+        "weighted_unifrac",
+        XASV.iloc[:, 0:100].values * 10000,
+        XASV.index.to_list(),
+        otu_ids=XASV.columns[0:100].to_list(),
+        tree=tree_rooted,
+        validate=True,
+    )
 
+    pd.DataFrame(
+        unweightedunifrac_distances.data, index=XASV.index, columns=XASV.index
+    ).to_csv("results/unweighted_unifrac_dist.csv")
 
-    pd.DataFrame(unweightedunifrac_distances.data, index=XASV.index,
-                 columns=XASV.index).to_csv("results/unweighted_unifrac_dist.csv")
-
-
-
-    pd.DataFrame(weightedunifrac_distances.data, index=XASV.index,
-                 columns=XASV.index).to_csv("results/weighted_unifrac_dist.csv")
+    pd.DataFrame(
+        weightedunifrac_distances.data, index=XASV.index, columns=XASV.index
+    ).to_csv("results/weighted_unifrac_dist.csv")

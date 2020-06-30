@@ -108,3 +108,4 @@ ENV/
 # For VS Code settings
 .vscode
 *.ipynb
+*.pickle

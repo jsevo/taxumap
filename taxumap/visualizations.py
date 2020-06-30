@@ -1,3 +1,16 @@
+import os
+
+#!/usr/bin/env python
+import sys
+import warnings
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import scipy.spatial.distance as ssd
+from sklearn.preprocessing import MinMaxScaler
+
+
 def pretty_print(
     X,
     embedding,
@@ -218,7 +231,7 @@ def pretty_print(
         plt.gcf().savefig(
             "results/no_axes_projection.png", dpi=250,
         )
-        return(fig)
+        return fig
 
     except FileNotFoundError as fe:
         print(fe)
@@ -230,6 +243,7 @@ def pretty_print(
     except:
         print("Not saving figure. Unknown error.")
         pass
+
 
 def scatter_plot_with_colors(embedding, colors, legend_items = [], bgcolor="white",
                              scatter_alpha=1.,s=1, fig=None, ax=None,ax2=None, figsize=(5,5),
@@ -293,6 +307,5 @@ def scatter_plot_with_colors(embedding, colors, legend_items = [], bgcolor="whit
 
 
     return(fig, ax, ax2)
-
 
 
