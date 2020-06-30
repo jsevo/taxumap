@@ -5,22 +5,22 @@ __author__ = ["Jonas Schluter", "Grant Hussey"]
 __copyright__ = "Copyright 2020, MIT License"
 
 import os
-
-#!/usr/bin/env python
 import sys
 import warnings
 from pathlib import Path
 
+import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import scipy.spatial.distance as ssd
+import seaborn as sns
+from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
+from umap import UMAP
 
 import taxumap.dataloading as parse
 import taxumap.tools as tls
 import taxumap.visualizations as viz
-
-from umap import UMAP
 
 
 class Taxumap:
@@ -56,8 +56,13 @@ class Taxumap:
         if weight is None:
             self.weight = [1] * len(agg_levels)
         else:
-            # TODO: Input checks
-            self.weight = weight
+            if len(weight) != len(agg_levels):
+                raise ValueError(
+                    "The length of
+                     the weight must match that of agg_levels"
+                )
+            else:
+                self.weight = weight
 
         # Set rel_abundances df
         try:
@@ -98,6 +103,7 @@ class Taxumap:
             _name_value_error(e, "fpt", "taxonomy")
             raise
 
+        # Set name attribute
         if isinstance(name, str):
             self.name = name
         else:
@@ -167,7 +173,35 @@ class Taxumap:
         else:
             return "taxumap_pickle.pickle"
 
-    def transform_self(self, debug=False, save=False, outdir=None, pickle=False):
+    @property
+    def taxumap1(self):
+        """Get a label for first dimension of embedded space"""
+        first_letters = [agg_level[0] for agg_level in self.agg_levels]
+        initials = "".join(first_letters)
+        return "taxumap-{}-1".format(initials)
+
+    @property
+    def taxumap2(self):
+        """Get a label for second dimension of embedded space"""
+        first_letters = [agg_level[0] for agg_level in self.agg_levels]
+        initials = "".join(first_letters)
+        return "taxumap-{}-2".format(initials)
+
+    @property
+    def _is_transformed(self):
+        try:
+            if isinstance(self.embedding, np.ndarray):
+                return True
+            else:
+                warnings.warn(
+                    "taxumap.embedding is not an ndarray, something went wrong"
+                )
+        except AttributeError:
+            return False
+
+    def transform_self(
+        self, scale=False, debug=False, save=False, outdir=None, pickle=False
+    ):
         """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
 
         Args:
@@ -177,7 +211,7 @@ class Taxumap:
             pickle (bool, optional): If True, will save self object as a pickle. Defaults to False.
         """
 
-        # I hard-coded distanceperlevel for now.
+        # Shouldn't need `try...except` because any Taxumap object should have proper attributes
         Xagg = taxonomic_aggregation(
             self.rel_abundances, self.taxonomy, self.agg_levels, distanceperlevel=False,
         )
@@ -196,6 +230,7 @@ class Taxumap:
         ).fit(Xscaled)
 
         self.embedding = self.taxumap.transform(Xscaled)
+        # self._is_transformed = True
         self.index = Xscaled.index
 
         if debug:
@@ -258,6 +293,14 @@ class Taxumap:
 
                 with open(os.path.join(outdir, self._embedded_pickle_name), "wb") as f:
                     pickle.dump(self, f)
+
+    def scatter(self, **kwargs):
+        if not self._is_transformed:
+            raise AttributeError(
+                "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
+            )
+        fig, ax = plt.subplots(kwargs["figsize"])
+        return fig, ax
 
     def __repr__(self):
 
