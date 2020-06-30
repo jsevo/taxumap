@@ -198,6 +198,56 @@ class Taxumap:
         except AttributeError:
             return False
 
+    @property
+    def df_embedding(self):
+
+        if self._is_transformed:
+            return pd.DataFrame(
+                self.embedding,
+                columns=[self.taxumap1, self.taxumap2],
+                index=self.index,
+            )
+        else:
+            raise AttributeError(
+                "Please run Taxumap.transform_self() to generate your embedding"
+            )
+
+    @property
+    def df_dominant_taxon(self):
+
+        # DataFrame where each row is the maximum taxon corresponding to the
+        # shared index in the column index_column
+        df_dom_tax_per_sample = (
+            pd.DataFrame(
+                self.rel_abundances.idxmax(axis="columns"), columns=["max_tax"]
+            )
+            .reset_index()
+            .set_index("max_tax")
+        )
+
+        # This is where a merge is done to add in the full taxonomical
+        # data for each of the "max_tax" dominant taxon
+        prelim_df_table = df_dom_tax_per_sample.merge(
+            self.taxonomy, right_index=True, left_index=True
+        )
+
+        # all below here, I am cleaning the prelim_df_table for final return
+        tax_hierarchy = prelim_df_table.columns[
+            prelim_df_table.columns != "index_column"
+        ]
+
+        new_tax_hierarchy = [
+            "dom_" + each_level.lower() for each_level in tax_hierarchy
+        ]
+
+        change_labels = dict(zip(tax_hierarchy, new_tax_hierarchy))
+
+        df_final = prelim_df_table.rename(columns=change_labels)
+        df_final.index.name = "max_tax"
+        df_final = df_final.reset_index().set_index("index_column")
+
+        return df_final
+
     def transform_self(
         self, scale=False, debug=False, save=False, outdir=None, pickle=False
     ):
@@ -264,7 +314,6 @@ class Taxumap:
         return self
 
     def save_it(self, outdir=None, pickle=False):
-        # TODO: Make it so that if pickle=True, it saves only pickle
 
         if outdir is None:
             print("Saving to ./results")
@@ -293,12 +342,25 @@ class Taxumap:
                 with open(os.path.join(outdir, self._embedded_pickle_name), "wb") as f:
                     pickle.dump(self, f)
 
-    def scatter(self, **kwargs):
+    def scatter(self, figsize=(16, 10), save=False, **kwargs):
+
         if not self._is_transformed:
             raise AttributeError(
                 "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
             )
-        fig, ax = plt.subplots(kwargs["figsize"])
+
+        fig, ax = plt.subplots(figsize=figsize)
+
+        ax.scatter(
+            self.df_embedding[self.df_embedding.columns[0]],
+            self.df_embedding[self.df_embedding.columns[1]],
+            **kwargs
+        )
+        ax.set_xlabel(self.taxumap1)
+        ax.set_ylabel(self.taxumap2)
+
+        sns.despine()
+
         return fig, ax
 
     def __repr__(self):
