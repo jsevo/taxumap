@@ -144,7 +144,9 @@ for n in tree_rooted.traverse(include_self=False):
     n.length = 1.0
 
 
-load_distances = True
+
+load_distances = True   
+
 if load_distances:
 
     unweightedunifrac_distances = pd.read_csv(
