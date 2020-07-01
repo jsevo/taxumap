@@ -173,6 +173,14 @@ class Taxumap:
             return "taxumap_pickle.pickle"
 
     @property
+    def _plot_name(self, ext="png"):
+        """Filename for saving a plot to file. Uses self.name if available."""
+        if isinstance(self.name, str):
+            return "_".join([self.name, "plot." + ext])
+        else:
+            return "plot." + ext
+
+    @property
     def taxumap1(self):
         """Get a label for first dimension of embedded space"""
         first_letters = [agg_level[0] for agg_level in self.agg_levels]
@@ -331,7 +339,7 @@ class Taxumap:
 
         sns.despine()
         if save:
-            _save(fig.savefig, outdir, "plot.png")
+            _save(fig.savefig, outdir, self._plot_name)
 
         return fig, ax
 
@@ -661,40 +669,49 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--taxonomy", help="Taxonomy Table")
     parser.add_argument("-w", "--weight", help="Weights")
     parser.add_argument("-a", "--agg_levels", help="Aggregation Levels")
+    parser.add_argument("-s", "--save", help="Set Save to True or False")
+    parser.add_argument("-o", "--outdir", help="Set directory to save embedding csv")
 
     args = parser.parse_args()
 
-    # try:
-    #     agg_levels = list(map(lambda x: x.capitalize(), args.agg_levels.split("/")))
-    # except AttributeError:
-    #     agg_levels = args.agg_levels
+    inputs = {}
+
+    # SAVING FLAG
+
+    if args.save is not None:
+        if "True" in args.save:
+            save = True
+        elif "False" in args.save:
+            save = False
+    else:
+        save = True
 
     # AGG_LEVELS
     if args.agg_levels is not None:
-        agg_levels = list(map(lambda x: x.capitalize(), args.agg_levels.split("/")))
-    else:
-        agg_levels = args.agg_levels
+        inputs["agg_levels"] = list(
+            map(lambda x: x.capitalize(), args.agg_levels.split("/"))
+        )
 
     # WEIGHT
     if args.weight is not None:
         weights = args.weight.split("/")
-        weights = list(map(lambda x: int(x), weights))
-    else:
-        weights = args.weight
+        inputs["weights"] = list(map(lambda x: int(x), weights))
 
-    # TAX META
+    # taxonomy
     if args.taxonomy is not None:
-        fpt = args.taxonomy
+        inputs["fpt"] = args.taxonomy
     else:
-        fpt = "./data/taxonomy.csv"
+        inputs["fpt"] = "./data/taxonomy.csv"
 
     # rel_abundances
     if args.microbiota_data is not None:
-        fpx = args.microbiota_data
+        inputs["fpx"] = args.microbiota_data
     else:
-        fpx = "./data/microbiota_table.csv"
+        inputs["fpx"] = "./data/microbiota_table.csv"
 
-    t = Taxumap(agg_levels=agg_levels, weight=weights, fpt=fpt, fpx=fpx)
+    if args.outdir is not None:
+        inputs['outdir'] = args.outdir
 
-    # TODO: opt to ask for saving, default yes
-    t.transform_self()
+    taxumap = Taxumap(**inputs)
+
+    taxumap.transform_self(save=save)
