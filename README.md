@@ -1,9 +1,12 @@
 # taxumap
 
 **Visualize structure in large microbiome data sets. Implements Uniform Manifold Approximation and Projection (UMAP) with phylogenetic hierarchy.**
+
 ## Installation
 
 First, clone this repository. Install it. Copy the data to the expected location. Run.
+
+
 ## 
     git clone https://github.com/jsevo/taxumap.git
     cd taxumap
@@ -31,3 +34,17 @@ The taxonomy table (`data/taxonomy.csv`) is expected to resolve higher taxonomic
 
 The data is expected to be located in the `data/` folder. Results will be written to the `results/` folder
 
+## Example data
+
+A dataset provided by Axel Olin works well for those wanting to try out the features of Taxumap or to better understand how to format your own data properly.
+
+* [Link to original publication](https://pubmed.ncbi.nlm.nih.gov/30142345/)
+* [Link to the dataset](http://dx.doi.org/10.17632/ynhdrcxtcc.1)
+
+Publication
+> Olin A, Henckel E, Chen Y, et al. Stereotypic Immune System Development in Newborn Children. Cell. 2018;174(5):1277-1292.e14. doi:10.1016/j.cell.2018.06.045
+
+Dataset
+> Olin, Axel (2018), “Stereotypic Immune System Development in Newborn Children”, Mendeley Data, v1
+
+Solely for convenience, I am providing in the `taxumap/example_data` directory a pre-cleaned version of this dataset, as allowed under the `CC BY 4.0` license. I also provide a Jupyter Notebook to see how the data was cleaned.
