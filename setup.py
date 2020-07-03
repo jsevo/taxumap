@@ -1,5 +1,8 @@
 from setuptools import setup
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
     name="taxumap",
     version="0.1",
@@ -7,7 +10,7 @@ setup(
     url="http://github.com/jsevo/taxumap",
     author="Jonas Schluter",
     author_email="jonas.schluter+github@gmail.com",
-    license="Apache License 2.0",
+    license="MIT License",
     packages=["taxumap"],
     install_requires=[
         "matplotlib",
@@ -17,6 +20,11 @@ setup(
         "scipy",
         "numba",
         "umap-learn",
+    ],
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
     ],
     zip_safe=False,
 )
