@@ -29,7 +29,7 @@ class Taxumap:
     def __init__(
         self,
         agg_levels=["Phylum", "Family"],
-        weight=None,
+        weights=None,
         rel_abundances=None,
         taxonomy=None,
         fpt=None,
@@ -41,7 +41,7 @@ class Taxumap:
 
         Args:
             agg_levels (list, optional): Determines which taxonomic levels to aggregate on. See taxUMAP documentation. Defaults to ["Phylum", "Family"].
-            weight (list of int, optional): Determines the weight of each of the agg_levels. Length of this list must match length of agg_levels. Defaults to None.
+            weights (list of int, optional): Determines the weights of each of the agg_levels. Length of this list must match length of agg_levels. Defaults to None.
             rel_abundances (dataframe, optional): Compositional data (relative counts) of abundance of ASV/OTU. Defaults to None.
             taxonomy (dataframe, optional): Dataframe with index of ASV/OTU and columns representing decsending taxonomic levels. Defaults to None.
             fpt (str, optional): Filepath to the rel_abundances meta dataframe, if saved on disk. Defaults to None.
@@ -53,15 +53,15 @@ class Taxumap:
 
         # I am pretty sure that my use of If...Else below violates the EAFP principles - should use Try..Except instead
 
-        if weight is None:
-            self.weight = [1] * len(agg_levels)
+        if weights is None:
+            self.weights = [1] * len(agg_levels)
         else:
-            if len(weight) != len(agg_levels):
+            if len(weights) != len(agg_levels):
                 raise ValueError(
-                    "The length of the weight must match that of agg_levels"
+                    "The length of the weights must match that of agg_levels"
                 )
             else:
-                self.weight = weight
+                self.weights = weights
 
         # Set rel_abundances df
         try:
@@ -269,36 +269,35 @@ class Taxumap:
         """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
 
         Args:
-            debug (bool, optional): If True, self will be given X and Xscaled variables (debug only). Defaults to False.
+            debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
             save (bool, optional): If True, will attempt to save the resulting embedded as a csv file. Defaults to False.
             outdir (str, optional): Path to where files should be saved, if save=True. Defaults to None.
             pickle (bool, optional): If True, will save self object as a pickle. Defaults to False.
         """
-
-        # Shouldn't need `try...except` because any Taxumap object should have proper attributes
-        Xagg = taxonomic_aggregation(
-            self.rel_abundances, self.taxonomy, self.agg_levels, distanceperlevel=False,
-        )
-
-        # I hard-coded scaling for now.
-        print("Not scaling")
-        Xscaled = Xagg
 
         # Default parameters from old legacy file
         neigh = 120
         min_dist = 0.2
         distance_metric = "braycurtis"
 
-        self.taxumap = UMAP(
-            n_neighbors=neigh, min_dist=min_dist, metric=distance_metric
-        ).fit(Xscaled)
+        # Shouldn't need `try...except` because any Taxumap object should have proper attributes
+        Xagg = tax_agg(
+            self.rel_abundances,
+            self.taxonomy,
+            self.agg_levels,
+            distance_metric,
+            self.weights,
+        )
 
-        self.embedding = self.taxumap.transform(Xscaled)
+        self.taxumap = UMAP(
+            n_neighbors=neigh, min_dist=min_dist, metric="precomputed"
+        ).fit(Xagg)
+
+        self.embedding = self.taxumap.transform(Xagg)
         # self._is_transformed = True
-        self.index = Xscaled.index
+        self.index = Xagg.index
 
         if debug:
-            self.Xscaled = Xscaled
             self.Xagg = Xagg
 
         if save:
@@ -337,7 +336,8 @@ class Taxumap:
         ax.set_xlabel(self.taxumap1)
         ax.set_ylabel(self.taxumap2)
 
-        sns.despine()
+        sns.despine(trim=True, offset=5)
+
         if save:
             _save(fig.savefig, outdir, self._plot_name)
 
@@ -346,21 +346,21 @@ class Taxumap:
     def __repr__(self):
 
         if self._is_df_loaded:
-            return "Taxumap(agg_levels = {}, weight = {}, rel_abundances = '{}', taxonomy = '{}')".format(
+            return "Taxumap(agg_levels = {}, weights = {}, rel_abundances = '{}', taxonomy = '{}')".format(
                 self.agg_levels,
-                self.weight,
+                self.weights,
                 "loaded from local scope",
                 "loaded from local scope",
             )
 
         elif self._is_fp_loaded:
-            return "Taxumap(agg_levels = {}, weight = {}, fpx = '{}', fpt = '{}')".format(
-                self.agg_levels, self.weight, self.fpx, self.fpt
+            return "Taxumap(agg_levels = {}, weights = {}, fpx = '{}', fpt = '{}')".format(
+                self.agg_levels, self.weights, self.fpx, self.fpt
             )
 
         else:
-            return "Taxumap(agg_levels = {}, weight = {}, fpx = '{}', fpt = '{}')".format(
-                self.agg_levels, self.weight, self.fpx, self.fpt
+            return "Taxumap(agg_levels = {}, weights = {}, fpx = '{}', fpt = '{}')".format(
+                self.agg_levels, self.weights, self.fpx, self.fpt
             )
 
     def __str__(self):
@@ -371,7 +371,7 @@ class Taxumap:
 
         messages = [
             "Taxumap with agg_levels = {} and weights = {}.".format(
-                self.agg_levels, self.weight
+                self.agg_levels, self.weights
             )
         ]
 
@@ -393,7 +393,51 @@ class Taxumap:
             return repr(self)
 
 
+def _test_variables(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
+    return rel_abundances, taxonomy, agg_levels, distance_metric, weights
+
+
+def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
+    """Generates a distance matrix aggregated on each designated taxon
+
+    Args:
+        rel_abundances (Pandas df): Relative abundance df with row-wise compositional data, row: sample, columns: OTU/ASV label
+        taxonomy (Pandas df): Row: OTU/ASV label, columns: hierarchy of taxonomy for that ASV/OTU
+        agg_levels (list of str): Taxons to aggregate
+        distance_metric (str): String to pass to ssd.cdist()
+        weights (list of int): Weights of the non-ASV/OTU taxons
+
+    Returns:
+        pandas df: distance table, row and columns are sample ids
+    """
+
+    _X = rel_abundances.copy()
+    Xdist = ssd.cdist(_X, _X)
+    Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
+
+    for agg_level, weight in zip(agg_levels, weights):
+        print("aggregating on %s" % agg_level)
+        Xagg = tls.aggregate_at_taxlevel(_X, taxonomy, agg_level)
+        Xagg = ssd.cdist(Xagg, Xagg, distance_metric)
+        Xagg = pd.DataFrame(Xagg, index=_X.index, columns=_X.index)
+        Xagg = Xagg * weight
+
+        Xdist = Xdist + Xagg
+
+    return Xdist
+
+
 def _save(fxn, outdir, filename, **kwargs):
+    """[summary]
+
+    Args:
+        fxn (function handle): f(Path-like object or str)
+        outdir ([type]): [description]
+        filename ([type]): [description]
+
+    Raises:
+        TypeError: [description]
+    """
 
     if not callable(fxn):
         raise TypeError("'fxn' passed is not callable")
@@ -417,6 +461,7 @@ def _save(fxn, outdir, filename, **kwargs):
         except Exception as e:
             throw_unknown_save_error(e)
             sys.exit(2)
+
     try:
         fxn(os.path.join(outdir, filename), **kwargs)
     except Exception as e:
@@ -441,11 +486,8 @@ def taxonomic_aggregation(
     ----------
 
     X : pandas.DataFrame, microbiota data table at lowers taxonomic level
-
     tax : pandas.DataFrame, taxonomy table
-
     agg_level : list; which taxonomic levels to include. Defaults to the second highest (usually phylum) and third lowest (usually family).
-
     distanceperlevel: bool, should sample-to-sample distances be calculated per tax level
 
     Returns 
@@ -659,7 +701,7 @@ def taxumap_legacy(
 
 
 if __name__ == "__main__":
-    """Please use a '/' delimiter for weight and agg_levels"""
+    """Please use a '/' delimiter for weights and agg_levels"""
     import argparse
 
     parser = argparse.ArgumentParser(description="Get options for taxumap run")
@@ -667,7 +709,7 @@ if __name__ == "__main__":
         "-m", "--microbiota_data", help="Microbiota (rel_abundances) Table"
     )
     parser.add_argument("-t", "--taxonomy", help="Taxonomy Table")
-    parser.add_argument("-w", "--weight", help="Weights")
+    parser.add_argument("-w", "--weights", help="Weights")
     parser.add_argument("-a", "--agg_levels", help="Aggregation Levels")
     parser.add_argument("-s", "--save", help="Set Save to True or False")
     parser.add_argument("-o", "--outdir", help="Set directory to save embedding csv")
@@ -692,9 +734,9 @@ if __name__ == "__main__":
             map(lambda x: x.capitalize(), args.agg_levels.split("/"))
         )
 
-    # WEIGHT
-    if args.weight is not None:
-        weights = args.weight.split("/")
+    # weights
+    if args.weights is not None:
+        weights = args.weights.split("/")
         inputs["weights"] = list(map(lambda x: int(x), weights))
 
     # taxonomy
@@ -710,7 +752,7 @@ if __name__ == "__main__":
         inputs["fpx"] = "./data/microbiota_table.csv"
 
     if args.outdir is not None:
-        inputs['outdir'] = args.outdir
+        inputs["outdir"] = args.outdir
 
     taxumap = Taxumap(**inputs)
 
