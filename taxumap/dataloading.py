@@ -12,7 +12,16 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
-    """Load the microbiota data"""
+    """Attempts to load a `microbiota_table.csv` file from specified file location
+
+    Args:
+        fp (str): Path to the microbiota_table.csv file
+        idx_col (str, optional): The column in microbiota_table.csv to be used as the index. Should be either ASV/OTU. Defaults to "index_column".
+        idx_dtype (Class, optional): Data type for the index. For consistency, str is a good choice.
+
+    Returns:
+        Pandas df: a properly-formatted rel_abundances df
+    """
 
     fp = Path(fp)
 
