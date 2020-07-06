@@ -57,9 +57,9 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
     # There's probably a better way of doing this test -
     # fp.resolve(strict=True) will error if file does not exist?
     try:
-        f = fp.resolve(strict=True)
+        _ = fp.resolve(strict=True)
 
-    except FileNotFoundError as fe:
+    except FileNotFoundError:
         logger.exception(
             "The microbiota composition table should be located in the data/ subfolder and named microbiota_table.csv"
         )
@@ -79,7 +79,7 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
 
             return X.fillna(0)
 
-        except ValueError as ve:
+        except ValueError:
             logger.exception(
                 "Please make sure the microbiota_table has a column labeled 'index_column' which contains the sample IDs"
             )
@@ -113,7 +113,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
         try:
             fp = fp.resolve(strict=True)
 
-        except FileNotFoundError as fe:
+        except FileNotFoundError:
             logger.exception(
                 "If using default settings, please make sure\n \
                 that the taxonomy table is located in the 'data/' subfolder and named 'taxonomy.csv\n \
@@ -132,7 +132,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
                 Additionally, the OTU or ASV column must be labeled as 'OTU' or 'ASV' unless otherwise specified"
             )
 
-        except (IsADirectoryError, pd.errors.ParserError, FileNotFoundError) as e:
+        except (IsADirectoryError, pd.errors.ParserError, FileNotFoundError):
             logger.exception(
                 "Your file path may be pointing to a file that doesn't exist, or \
                 simply to a directory. Please re-check your file path."
@@ -151,7 +151,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
 
             tax.columns = map(str.capitalize, tax.columns)
 
-        except ValueError as e:
+        except ValueError:
             logger.exception("ASV/OTU not found in your columns")
             sys.exit(2)
 
@@ -188,7 +188,7 @@ def parse_asvcolor_data(fp):
         fp = Path(fp)
         try:
             f = fp.resolve(strict=True)
-        except FileNotFoundError as fe:
+        except FileNotFoundError:
             logger.exception(
                 "The color per ASV table should be located in the data/ subfolder and named asvcolors.csv"
             )
@@ -212,7 +212,7 @@ def parse_asvcolor_data(fp):
                     )
                     taxcolors = taxcolors.fillna("grey")
                 return taxcolors
-            except ValueError as ve:
+            except ValueError:
                 logger.exception(
                     "Please make sure the taxcolors has columns labeled ['ASV','HexColor'], and contain as values the ASV labels as strings and valid hex color stings"
                 )

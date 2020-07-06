@@ -540,7 +540,7 @@ def taxonomic_aggregation(
             if agg_levels[0] == agg_levels[1]:
                 # in case the taxonomy table is weird and has few columns
                 agg_levels = agg_levels[0]
-        except AssertionError as ae:
+        except AssertionError:
             logger.exception(
                 "Issue occured with size of taxonomy table, or the specified agg_levels."
             )
