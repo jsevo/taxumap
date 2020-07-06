@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 general_format = logging.Formatter(
-    "%(asctime)s:%(funcName)s:%(levelname)s - %(message)s"
+    "%(asctime)s:%(funcName)s:%(levelname)s - %(message)s\n"
 )
-stream_format = logging.Formatter("%(funcName)s:%(levelname)s \n %(message)s \n")
+stream_format = logging.Formatter("%(funcName)s:%(levelname)s\n%(message)s\n")
 
 # set file handler for info and above
 fh_info = logging.FileHandler("taxumap_debug.log")
@@ -229,7 +229,7 @@ class Taxumap:
             if isinstance(self.embedding, np.ndarray):
                 return True
             else:
-                warnings.warn(
+                logger.warning(
                     "taxumap.embedding is not an ndarray, something went wrong"
                 )
         except AttributeError:
@@ -499,7 +499,7 @@ def _save(fxn, outdir, filename, **kwargs):
 
 def throw_unknown_save_error(e):
     logger.exception(
-        "\nUnknown error has occured. Cannot save embedding as instructed.\n"
+        "\nUnknown error has occured. Cannot save embedding as instructed."
     )
     sys.exit(2)
 
@@ -704,10 +704,6 @@ def taxumap_legacy(
             X_embedded.to_csv("results/embedded.csv")
 
     if print_figure:
-        # diversity per sample
-        # if not np.all(X.sum(axis=1) > 0):
-        #     warnings.warn("some rows have zero sum. adding tiny value (1e-16)")
-        #     X = X + 1e-16
         if print_with_diversity:
             ivs = X.apply(lambda r: 1 / np.sum(r ** 2), axis=1)
         else:
