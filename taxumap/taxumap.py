@@ -7,6 +7,7 @@ __copyright__ = "Copyright 2020, MIT License"
 import os
 import sys
 import warnings
+import logging
 from pathlib import Path
 
 import matplotlib as mpl
@@ -21,6 +22,34 @@ from umap import UMAP
 import taxumap.dataloading as parse
 import taxumap.tools as tls
 import taxumap.visualizations as viz
+
+# setup logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+general_format = logging.Formatter(
+    "%(asctime)s:%(funcName)s:%(levelname)s - %(message)s"
+)
+stream_format = logging.Formatter("%(funcName)s:%(levelname)s \n %(message)s \n")
+
+# set file handler for info and above
+fh_info = logging.FileHandler("taxumap_debug.log")
+fh_info.setLevel(logging.INFO)
+fh_info.setFormatter(general_format)
+
+# file handler for warning and above
+fh_warning = logging.FileHandler("taxumap_warnings.log")
+fh_warning.setLevel(logging.WARNING)
+fh_warning.setFormatter(general_format)
+
+# anything warning and above will be printed to console
+sh = logging.StreamHandler()
+sh.setFormatter(stream_format)
+sh.setLevel(logging.WARNING)  # this level and ABOVE
+
+logger.addHandler(fh_info)
+logger.addHandler(fh_warning)
+logger.addHandler(sh)
 
 
 class Taxumap:
@@ -68,7 +97,7 @@ class Taxumap:
             if rel_abundances is None and fpx is None:
                 raise ValueError
             elif isinstance(rel_abundances, pd.DataFrame):
-                print("Recognized `rel_abundances` parameter as Pandas DataFrame")
+                logger.info("Recognized `rel_abundances` parameter as Pandas DataFrame")
                 self.fpx = None
                 self.rel_abundances = rel_abundances
                 parse.check_if_compositional(
@@ -88,7 +117,7 @@ class Taxumap:
             if taxonomy is None and fpt is None:
                 raise ValueError
             elif isinstance(taxonomy, pd.DataFrame):
-                print("Recognized `taxonomy` parameter as Pandas DataFrame")
+                logger.info("Recognized `taxonomy` parameter as Pandas DataFrame")
                 self.fpt = None
                 self.taxonomy = taxonomy
                 self.taxonomy.columns = map(str.capitalize, self.taxonomy.columns)
@@ -310,8 +339,7 @@ class Taxumap:
         try:
             _save(self.df_embedding.to_csv, outdir, self._embedded_csv_name)
         except AttributeError as e:
-            print(e)
-            print(
+            logger.warning(
                 "\nEmbedding not currently populated. Please run taxumap.Taxumap.transform_self(save=True).\n"
             )
         except Exception as e:
@@ -416,7 +444,7 @@ def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
     Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
 
     for agg_level, weight in zip(agg_levels, weights):
-        print("aggregating on %s" % agg_level)
+        logger.info("aggregating on %s" % agg_level)
         Xagg = tls.aggregate_at_taxlevel(_X, taxonomy, agg_level)
         Xagg = ssd.cdist(Xagg, Xagg, distance_metric)
         Xagg = pd.DataFrame(Xagg, index=_X.index, columns=_X.index)
@@ -446,8 +474,7 @@ def _save(fxn, outdir, filename, **kwargs):
         try:
             outdir = Path(outdir).resolve(strict=True)
         except (FileNotFoundError, TypeError) as e:
-            print(e)
-            print(
+            logger.warning(
                 '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
             )
 
@@ -455,9 +482,9 @@ def _save(fxn, outdir, filename, **kwargs):
         outdir = Path("./results").resolve()
         try:
             os.mkdir(outdir)
-            print("Making ./results folder...")
+            logger.info("Making ./results folder...")
         except FileExistsError:
-            print("./results folder already exists")
+            logger.info("./results folder already exists")
         except Exception as e:
             throw_unknown_save_error(e)
             sys.exit(2)
@@ -467,12 +494,13 @@ def _save(fxn, outdir, filename, **kwargs):
     except Exception as e:
         throw_unknown_save_error(e)
     else:
-        print("Save successful")
+        logger.info("Save successful")
 
 
 def throw_unknown_save_error(e):
-    print(e)
-    print("\nUnknown error has occured. Cannot save embedding as instructed.\n")
+    logger.exception(
+        "\nUnknown error has occured. Cannot save embedding as instructed.\n"
+    )
     sys.exit(2)
 
 
@@ -508,19 +536,21 @@ def taxonomic_aggregation(
 
             # Automaticaly get the second and second-to-last agg_levels
             agg_levels = np.array(tax.columns)[[1, -2]]
-            print(agg_levels)
+            logger.info("agg_levels are {}".format([agg_levels]))
             if agg_levels[0] == agg_levels[1]:
                 # in case the taxonomy table is weird and has few columns
                 agg_levels = agg_levels[0]
         except AssertionError as ae:
-            print("{0}".format(ae))
+            logger.exception(
+                "Issue occured with size of taxonomy table, or the specified agg_levels."
+            )
 
     _X = X.copy()
     if distanceperlevel:
         Xdist = ssd.cdist(_X, _X)
         Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
         for l in agg_levels:
-            print("aggregating on %s" % l)
+            logger.info("aggregating on %s" % l)
             Xagg = tls.aggregate_at_taxlevel(_X, tax, l)
             if distanceperlevel:
                 Xagg = ssd.cdist(Xagg, Xagg, distancemetric)
@@ -529,7 +559,7 @@ def taxonomic_aggregation(
         X = Xdist
     else:
         for l in agg_levels:
-            print("aggregating on %s" % l)
+            logger.info("aggregating on %s" % l)
             Xagg = tls.aggregate_at_taxlevel(_X, tax, l)
             X = X.join(Xagg, lsuffix="_r")
 
@@ -542,9 +572,7 @@ def taxonomic_aggregation(
 
 
 def _name_value_error(e, fp_param, df_param):
-    print(e)
-    print()
-    print(
+    logger.exception(
         "Please provide the constructor with one of the following: a filepath to your {} file via parameter `{}`, or with an initialized variable for your {} dataframe via the parameter `{}`".format(
             df_param, fp_param, df_param, df_param
         )
@@ -633,7 +661,7 @@ def taxumap_legacy(
     if withscaling:
         Xscaled = tls.scale(Xagg)
     else:
-        print("not scaling")
+        logger.info("not scaling")
         Xscaled = Xagg
 
     if loadembedding:
@@ -668,9 +696,9 @@ def taxumap_legacy(
         if save_embedding:
 
             if not os.path.isdir("results"):
-                print()
-                print("No results folder in current working directory.")
-                print("Will create one.")
+                logger.info(
+                    "No results folder in current working directory.\nCreating one now..."
+                )
                 os.mkdir("results")
 
             X_embedded.to_csv("results/embedded.csv")
