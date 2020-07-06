@@ -11,33 +11,9 @@ import pandas as pd
 import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
 
-# setup logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+from taxumap.custom_logging import setup_logger
 
-general_format = logging.Formatter(
-    "%(asctime)s:%(funcName)s:%(levelname)s - %(message)s\n"
-)
-stream_format = logging.Formatter("%(funcName)s:%(levelname)s\n%(message)s\n")
-
-# set file handler for info and above
-fh_info = logging.FileHandler("dataloading_debug.log")
-fh_info.setLevel(logging.INFO)
-fh_info.setFormatter(general_format)
-
-# file handler for warning and above
-fh_warning = logging.FileHandler("dataloading_warnings.log")
-fh_warning.setLevel(logging.WARNING)
-fh_warning.setFormatter(general_format)
-
-# anything warning and above will be printed to console
-sh = logging.StreamHandler()
-sh.setFormatter(stream_format)
-sh.setLevel(logging.WARNING)  # this level and ABOVE
-
-logger.addHandler(fh_info)
-logger.addHandler(fh_warning)
-logger.addHandler(sh)
+logger = setup_logger("dataloading")
 
 
 def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
