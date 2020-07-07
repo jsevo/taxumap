@@ -19,10 +19,10 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from umap import UMAP
 
-import dataloading as parse
-import tools as tls
-import visualizations as viz
-from custom_logging import setup_logger
+import taxumap.dataloading as parse
+import taxumap.tools as tls
+import taxumap.visualizations as viz
+from taxumap.custom_logging import setup_logger
 
 logger = setup_logger("taxumap", verbose=False, debug=False)
 
@@ -700,8 +700,9 @@ def taxumap_legacy(
 
 
 if __name__ == "__main__":
-    """Please use a '/' delimiter for weights and agg_levels"""
     import argparse
+
+    """Please use a '/' delimiter for weights and agg_levels"""
 
     parser = argparse.ArgumentParser(description="Get options for taxumap run")
     parser.add_argument(
@@ -732,15 +733,15 @@ if __name__ == "__main__":
 
     # for verbose
     if args.verbose:
-        logger = setup_logger("taxumap_CLI", verbose=True)
+        logger = setup_logger("run_taxumap", verbose=True)
     else:
-        logger = setup_logger("taxumap_CLI")
+        logger = setup_logger("run_taxumap")
 
     # for debug
     if args.debug:
-        logger = setup_logger("taxumap_CLI", debug=True)
+        logger = setup_logger("run_taxumap", debug=True)
     else:
-        logger = setup_logger("taxumap_CLI")
+        logger = setup_logger("run_taxumap")
 
     if args.save is not None:
         if "True" in args.save:

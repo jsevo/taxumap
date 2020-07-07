@@ -6,6 +6,10 @@ import logging
 
 import taxumap.taxumap as t
 
+# The data for unittests is from Olin and Axel:
+# Olin, Axel (2018), “Stereotypic Immune System Development in Newborn Children”, Mendeley Data, v1
+
+
 # setup logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -41,21 +45,15 @@ class TestTaxumap(unittest.TestCase):
 
     def setUp(self):
         self.broke_name = t.Taxumap(
-            fpt="/Users/granthussey/github/taxumap/taxumap/unittests/taxonomy.csv",
-            fpx="/Users/granthussey/github/taxumap/taxumap/unittests/microbiota_table.csv",
-            name=3465,
+            fpt="taxonomy.csv", fpx="microbiota_table.csv", name=3465,
         )
 
         self.t1 = t.Taxumap(
-            fpt="/Users/granthussey/github/taxumap/taxumap/unittests/taxonomy.csv",
-            fpx="/Users/granthussey/github/taxumap/taxumap/unittests/microbiota_table.csv",
-            name="test1",
+            fpt="taxonomy.csv", fpx="microbiota_table.csv", name="test1",
         )
 
         self.t2 = t.Taxumap(
-            fpt="/Users/granthussey/github/taxumap/taxumap/unittests/taxonomy.csv",
-            fpx="/Users/granthussey/github/taxumap/taxumap/unittests/microbiota_table.csv",
-            name="test2_transformed",
+            fpt="taxonomy.csv", fpx="microbiota_table.csv", name="test2_transformed",
         )
 
         self.t2.transform_self()
