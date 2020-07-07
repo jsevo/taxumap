@@ -11,7 +11,7 @@ import pandas as pd
 import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
 
-from taxumap.custom_logging import setup_logger
+from custom_logging import setup_logger
 
 logger = setup_logger("dataloading")
 

@@ -19,12 +19,12 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from umap import UMAP
 
-import taxumap.dataloading as parse
-import taxumap.tools as tls
-import taxumap.visualizations as viz
-from taxumap.custom_logging import setup_logger
+import dataloading as parse
+import tools as tls
+import visualizations as viz
+from custom_logging import setup_logger
 
-logger = setup_logger("taxumap")
+logger = setup_logger("taxumap", verbose=False, debug=False)
 
 
 class Taxumap:
@@ -712,12 +712,35 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--agg_levels", help="Aggregation Levels")
     parser.add_argument("-s", "--save", help="Set Save to True or False")
     parser.add_argument("-o", "--outdir", help="Set directory to save embedding csv")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="To get logging at info level and higher",
+        action="count",
+    )
+
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="To get logging at debug level and higher",
+        action="count",
+    )
 
     args = parser.parse_args()
 
     inputs = {}
 
-    # SAVING FLAG
+    # for verbose
+    if args.verbose:
+        logger = setup_logger("taxumap_CLI", verbose=True)
+    else:
+        logger = setup_logger("taxumap_CLI")
+
+    # for debug
+    if args.debug:
+        logger = setup_logger("taxumap_CLI", debug=True)
+    else:
+        logger = setup_logger("taxumap_CLI")
 
     if args.save is not None:
         if "True" in args.save:
