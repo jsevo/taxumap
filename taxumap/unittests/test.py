@@ -2,8 +2,21 @@ import os
 import shutil
 import unittest
 from pathlib import Path
+import logging
 
 import taxumap.taxumap as t
+
+# The data for unittests is from Olin and Axel:
+# Olin, Axel (2018), “Stereotypic Immune System Development in Newborn Children”, Mendeley Data, v1
+
+
+# setup logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+stream_format = logging.Formatter("%(funcName)s:%(levelname)s\n%(message)s\n")
+sh = logging.StreamHandler()
+sh.setFormatter(stream_format)
+sh.setLevel(logging.WARNING)  # this level and ABOVE
 
 
 class TestTaxumap(unittest.TestCase):
@@ -11,7 +24,7 @@ class TestTaxumap(unittest.TestCase):
     def setUpClass(cls):
         """Makes temp directory to save everything"""
         unique_folder_name = Path("./temp").resolve()  # maybe beef this up later lol
-        print("Making temp directory at {}.".format(unique_folder_name))
+        logger.warning("Making temp directory at {}.".format(unique_folder_name))
 
         try:
             os.mkdir(unique_folder_name)
@@ -19,7 +32,9 @@ class TestTaxumap(unittest.TestCase):
             try:
                 os.rmdir(unique_folder_name)
             except OSError:
-                print("Pease delete the temp directory in taxumap/taxumap/unittests")
+                logger.critical(
+                    "Pease delete the temp directory in taxumap/taxumap/unittests"
+                )
 
     @classmethod
     def tearDownTest(cls):
@@ -30,21 +45,15 @@ class TestTaxumap(unittest.TestCase):
 
     def setUp(self):
         self.broke_name = t.Taxumap(
-            fpt="/Users/granthussey/github/taxumap/taxumap/unittests/taxonomy.csv",
-            fpx="/Users/granthussey/github/taxumap/taxumap/unittests/microbiota_table.csv",
-            name=3465,
+            fpt="taxonomy.csv", fpx="microbiota_table.csv", name=3465,
         )
 
         self.t1 = t.Taxumap(
-            fpt="/Users/granthussey/github/taxumap/taxumap/unittests/taxonomy.csv",
-            fpx="/Users/granthussey/github/taxumap/taxumap/unittests/microbiota_table.csv",
-            name="test1",
+            fpt="taxonomy.csv", fpx="microbiota_table.csv", name="test1",
         )
 
         self.t2 = t.Taxumap(
-            fpt="/Users/granthussey/github/taxumap/taxumap/unittests/taxonomy.csv",
-            fpx="/Users/granthussey/github/taxumap/taxumap/unittests/microbiota_table.csv",
-            name="test2_transformed",
+            fpt="taxonomy.csv", fpx="microbiota_table.csv", name="test2_transformed",
         )
 
         self.t2.transform_self()

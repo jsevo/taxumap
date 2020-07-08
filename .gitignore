@@ -107,5 +107,7 @@ ENV/
 
 # For VS Code settings
 .vscode
-*.ipynb
+/notebooks/*
 *.pickle
+taxumap/todo.md
+*.json

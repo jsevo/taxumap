@@ -7,6 +7,7 @@ __copyright__ = "Copyright 2020, MIT License"
 import os
 import sys
 import warnings
+import logging
 from pathlib import Path
 
 import matplotlib as mpl
@@ -18,9 +19,12 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from umap import UMAP
 
-import taxumap.dataloading as parse
-import taxumap.tools as tls
+import taxumap.dataloading as dataloading
+import taxumap.tools as tools
 import taxumap.visualizations as viz
+from taxumap.custom_logging import setup_logger
+
+logger = setup_logger("taxumap", verbose=False, debug=False)
 
 
 class Taxumap:
@@ -29,7 +33,7 @@ class Taxumap:
     def __init__(
         self,
         agg_levels=["Phylum", "Family"],
-        weight=None,
+        weights=None,
         rel_abundances=None,
         taxonomy=None,
         fpt=None,
@@ -41,9 +45,9 @@ class Taxumap:
 
         Args:
             agg_levels (list, optional): Determines which taxonomic levels to aggregate on. See taxUMAP documentation. Defaults to ["Phylum", "Family"].
-            weight (list of int, optional): Determines the weight of each of the agg_levels. Length of this list must match length of agg_levels. Defaults to None.
+            weights (list of int, optional): Determines the weights of each of the agg_levels. Length of this list must match length of agg_levels. Defaults to None.
             rel_abundances (dataframe, optional): Compositional data (relative counts) of abundance of ASV/OTU. Defaults to None.
-            taxonomy (dataframe, optional): Dataframe with index of ASV/OTU and columns representing decsending taxonomic levels. Defaults to None.
+            taxonomy (dataframe, optional): Dataframe with index of ASV/OTU and columns representing descending taxonomic levels. Defaults to None.
             fpt (str, optional): Filepath to the rel_abundances meta dataframe, if saved on disk. Defaults to None.
             fpx (str, optional): Filepath to the rel_abundances dataframe, if saved on disk. Defaults to None.
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
@@ -53,30 +57,47 @@ class Taxumap:
 
         # I am pretty sure that my use of If...Else below violates the EAFP principles - should use Try..Except instead
 
-        if weight is None:
-            self.weight = [1] * len(agg_levels)
+        if weights is None:
+            self.weights = [1] * len(agg_levels)
         else:
-            if len(weight) != len(agg_levels):
+            if len(weights) != len(agg_levels):
                 raise ValueError(
-                    "The length of the weight must match that of agg_levels"
+                    "The length of the weights must match that of agg_levels"
                 )
             else:
-                self.weight = weight
+                self.weights = weights
 
         # Set rel_abundances df
         try:
             if rel_abundances is None and fpx is None:
                 raise ValueError
             elif isinstance(rel_abundances, pd.DataFrame):
-                print("Recognized `rel_abundances` parameter as Pandas DataFrame")
+                logger.info("Recognized `rel_abundances` parameter as Pandas DataFrame")
                 self.fpx = None
                 self.rel_abundances = rel_abundances
-                parse.check_if_compositional(
-                    rel_abundaces, name="locally-supplied microbiota (rel_abundances)"
+
+                try:
+                    self.rel_abundances.set_index("index_column")
+                except KeyError:
+                    # if it can't set the index to 'index_column', maybe it's already set
+                    if self.rel_abundances.index.name != "index_column":
+                        logger.exception(
+                            "Your rel_abundances df needs to contain 'index_column' for its 'ASV' or 'OTU' column"
+                        )
+                        sys.exit(2)
+                else:
+                    logger.info(
+                        "index_column has been set as index for self.rel_abundances"
+                    )
+
+                dataloading.check_if_compositional(
+                    self.rel_abundances,
+                    name="locally-supplied microbiota (rel_abundances)",
                 )
+
             elif isinstance(fpx, str):
                 self.fpx = fpx
-                self.rel_abundances = parse.parse_microbiome_data(fpx)
+                self.rel_abundances = dataloading.parse_microbiome_data(fpx)
             else:
                 raise NameError
         except (ValueError, NameError) as e:
@@ -88,14 +109,14 @@ class Taxumap:
             if taxonomy is None and fpt is None:
                 raise ValueError
             elif isinstance(taxonomy, pd.DataFrame):
-                print("Recognized `taxonomy` parameter as Pandas DataFrame")
+                logger.info("Recognized `taxonomy` parameter as Pandas DataFrame")
                 self.fpt = None
                 self.taxonomy = taxonomy
                 self.taxonomy.columns = map(str.capitalize, self.taxonomy.columns)
-                parse.check_tax_is_consistent(self.taxonomy)
+                dataloading.check_tax_is_consistent(self.taxonomy)
             elif isinstance(fpx, str):
                 self.fpt = fpt
-                self.taxonomy = parse.parse_taxonomy_data(fpt)
+                self.taxonomy = dataloading.parse_taxonomy_data(fpt)
             else:
                 raise NameError
         except (ValueError, NameError) as e:
@@ -113,6 +134,10 @@ class Taxumap:
         return isinstance(self.taxonomy, pd.DataFrame)
 
     @property
+    def _exist_tax_df(self):
+        return isinstance(self.rel_abundances, pd.DataFrame)
+
+    @property
     def _exist_tax_meta_fp(self):
         """Returns true if the `fpt` parameter is a valid filepath"""
         try:
@@ -121,10 +146,6 @@ class Taxumap:
             return False
         else:
             return logic
-
-    @property
-    def _exist_tax_df(self):
-        return isinstance(self.rel_abundances, pd.DataFrame)
 
     @property
     def _exist_tax_fp(self):
@@ -173,152 +194,194 @@ class Taxumap:
             return "taxumap_pickle.pickle"
 
     @property
+    def _plot_name(self, ext="png"):
+        """Filename for saving a plot to file. Uses self.name if available."""
+        if isinstance(self.name, str):
+            return "_".join([self.name, "plot." + ext])
+        else:
+            return "plot." + ext
+
+    @property
     def taxumap1(self):
-        """Get a label for first dimension of embedded space"""
+        """Get a label for first dimension of taxUMAP embedded space"""
         first_letters = [agg_level[0] for agg_level in self.agg_levels]
         initials = "".join(first_letters)
         return "taxumap-{}-1".format(initials)
 
     @property
     def taxumap2(self):
-        """Get a label for second dimension of embedded space"""
+        """Get a label for second dimension of taxUMAP embedded space"""
         first_letters = [agg_level[0] for agg_level in self.agg_levels]
         initials = "".join(first_letters)
         return "taxumap-{}-2".format(initials)
 
     @property
     def _is_transformed(self):
+        """Returns True if Taxumap.transform_self() has been previously run"""
         try:
             if isinstance(self.embedding, np.ndarray):
                 return True
             else:
-                warnings.warn(
+                logger.warning(
                     "taxumap.embedding is not an ndarray, something went wrong"
                 )
         except AttributeError:
             return False
 
-    def transform_self(
-        self, scale=False, debug=False, save=False, outdir=None, pickle=False
-    ):
+    @property
+    def df_embedding(self):
+        """Creates a dataframe from the embedding generated by Taxumap.transform_self()"""
+        if self._is_transformed:
+            return pd.DataFrame(
+                self.embedding,
+                columns=[self.taxumap1, self.taxumap2],
+                index=self.index,
+            )
+        else:
+            raise AttributeError(
+                "Please run Taxumap.transform_self() to generate your embedding"
+            )
+
+    @property
+    def df_dominant_taxon(self):
+
+        # DataFrame where each row is the maximum taxon corresponding to the
+        # shared index in the column index_column
+        df_dom_tax_per_sample = (
+            pd.DataFrame(
+                self.rel_abundances.idxmax(axis="columns"), columns=["max_tax"]
+            )
+            .reset_index()
+            .set_index("max_tax")
+        )
+
+        # This is where a merge is done to add in the full taxonomical
+        # data for each of the "max_tax" dominant taxon
+        prelim_df_table = df_dom_tax_per_sample.merge(
+            self.taxonomy, right_index=True, left_index=True
+        )
+
+        # all below here, I am cleaning the prelim_df_table for final return
+        tax_hierarchy = prelim_df_table.columns[
+            prelim_df_table.columns != "index_column"
+        ]
+
+        new_tax_hierarchy = [
+            "dom_" + each_level.lower() for each_level in tax_hierarchy
+        ]
+
+        change_labels = dict(zip(tax_hierarchy, new_tax_hierarchy))
+
+        df_final = prelim_df_table.rename(columns=change_labels)
+        df_final.index.name = "max_tax"
+        df_final = df_final.reset_index().set_index("index_column")
+
+        return df_final
+
+    def pickle(self, outdir):
+
+        import pickle
+
+        with open(os.path.join(outdir, self._embedded_pickle_name), "wb") as f:
+            pickle.dump(self, f)
+
+        return self
+
+    def transform_self(self, scale=False, debug=False, save=False, outdir=None):
         """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
 
         Args:
-            debug (bool, optional): If True, self will be given X and Xscaled variables (debug only). Defaults to False.
+            debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
             save (bool, optional): If True, will attempt to save the resulting embedded as a csv file. Defaults to False.
             outdir (str, optional): Path to where files should be saved, if save=True. Defaults to None.
             pickle (bool, optional): If True, will save self object as a pickle. Defaults to False.
         """
-
-        # Shouldn't need `try...except` because any Taxumap object should have proper attributes
-        Xagg = taxonomic_aggregation(
-            self.rel_abundances, self.taxonomy, self.agg_levels, distanceperlevel=False,
-        )
-
-        # I hard-coded scaling for now.
-        print("Not scaling")
-        Xscaled = Xagg
 
         # Default parameters from old legacy file
         neigh = 120
         min_dist = 0.2
         distance_metric = "braycurtis"
 
-        self.taxumap = UMAP(
-            n_neighbors=neigh, min_dist=min_dist, metric=distance_metric
-        ).fit(Xscaled)
+        # Shouldn't need `try...except` because any Taxumap object should have proper attributes
+        Xagg = tax_agg(
+            self.rel_abundances,
+            self.taxonomy,
+            self.agg_levels,
+            distance_metric,
+            self.weights,
+        )
 
-        self.embedding = self.taxumap.transform(Xscaled)
+        self.taxumap = UMAP(
+            n_neighbors=neigh, min_dist=min_dist, metric="precomputed"
+        ).fit(Xagg)
+
+        self.embedding = self.taxumap.transform(Xagg)
         # self._is_transformed = True
-        self.index = Xscaled.index
+        self.index = Xagg.index
 
         if debug:
-            self.Xscaled = Xscaled
             self.Xagg = Xagg
 
         if save:
-            try:
-                outdir = Path(outdir).resolve(strict=True)
-            except (FileNotFoundError, TypeError) as e:
-                print(e)
-                print(
-                    '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
-                )
-                outdir = Path("./results").resolve()
-            except Exception as e:
-                throw_unknown_save_error(e)
+            self.save_embedding(outdir=outdir)
 
-            if outdir.is_dir():
-                self.save_it(outdir, pickle)
-            else:
-                try:
-                    os.mkdir(outdir)
-                except FileExistsError as e:
-                    print(e)
-                    print(
-                        '\nUnable to automatically save embedding, most likely do to a file called "results" in your PWD.\n'
-                    )
-                    sys.exit(2)
-                else:
-                    self.save_it(outdir, pickle)
         return self
 
-    def save_it(self, outdir=None, pickle=False):
-        # TODO: Make it so that if pickle=True, it saves only pickle
-
-        if outdir is None:
-            print("Saving to ./results")
-            outdir = Path("./results").resolve()
-            try:
-                os.mkdir(outdir)
-                print("Making ./results folder...")
-            except FileExistsError:
-                print("./results folder already exists")
+    def save_embedding(self, outdir=None):
 
         try:
-            pd.DataFrame(
-                self.embedding, columns=["taxUMAP1", "taxUMAP2"], index=self.index
-            ).to_csv(os.path.join(outdir, self._embedded_csv_name))
+            _save(self.df_embedding.to_csv, outdir, self._embedded_csv_name)
         except AttributeError as e:
-            print(e)
-            print(
+            logger.warning(
                 "\nEmbedding not currently populated. Please run taxumap.Taxumap.transform_self(save=True).\n"
             )
         except Exception as e:
             throw_unknown_save_error(e)
-        else:
-            if pickle:
-                import pickle
 
-                with open(os.path.join(outdir, self._embedded_pickle_name), "wb") as f:
-                    pickle.dump(self, f)
+        return self
 
-    def scatter(self, **kwargs):
+    def scatter(self, figsize=(16, 10), save=False, outdir=None, **kwargs):
+
         if not self._is_transformed:
             raise AttributeError(
                 "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
             )
-        fig, ax = plt.subplots(kwargs["figsize"])
+
+        fig, ax = plt.subplots(figsize=figsize)
+
+        ax.scatter(
+            self.df_embedding[self.df_embedding.columns[0]],
+            self.df_embedding[self.df_embedding.columns[1]],
+            **kwargs
+        )
+        ax.set_xlabel(self.taxumap1)
+        ax.set_ylabel(self.taxumap2)
+
+        sns.despine(trim=True, offset=5)
+
+        if save:
+            _save(fig.savefig, outdir, self._plot_name)
+
         return fig, ax
 
     def __repr__(self):
 
         if self._is_df_loaded:
-            return "Taxumap(agg_levels = {}, weight = {}, rel_abundances = '{}', taxonomy = '{}')".format(
+            return "Taxumap(agg_levels = {}, weights = {}, rel_abundances = '{}', taxonomy = '{}')".format(
                 self.agg_levels,
-                self.weight,
+                self.weights,
                 "loaded from local scope",
                 "loaded from local scope",
             )
 
         elif self._is_fp_loaded:
-            return "Taxumap(agg_levels = {}, weight = {}, fpx = '{}', fpt = '{}')".format(
-                self.agg_levels, self.weight, self.fpx, self.fpt
+            return "Taxumap(agg_levels = {}, weights = {}, fpx = '{}', fpt = '{}')".format(
+                self.agg_levels, self.weights, self.fpx, self.fpt
             )
 
         else:
-            return "Taxumap(agg_levels = {}, weight = {}, fpx = '{}', fpt = '{}')".format(
-                self.agg_levels, self.weight, self.fpx, self.fpt
+            return "Taxumap(agg_levels = {}, weights = {}, fpx = '{}', fpt = '{}')".format(
+                self.agg_levels, self.weights, self.fpx, self.fpt
             )
 
     def __str__(self):
@@ -329,7 +392,7 @@ class Taxumap:
 
         messages = [
             "Taxumap with agg_levels = {} and weights = {}.".format(
-                self.agg_levels, self.weight
+                self.agg_levels, self.weights
             )
         ]
 
@@ -351,9 +414,86 @@ class Taxumap:
             return repr(self)
 
 
+def _test_variables(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
+    return rel_abundances, taxonomy, agg_levels, distance_metric, weights
+
+
+def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
+    """Generates a distance matrix aggregated on each designated taxon
+
+    Args:
+        rel_abundances (Pandas df): Relative abundance df with row-wise compositional data, row: sample, columns: OTU/ASV label
+        taxonomy (Pandas df): Row: OTU/ASV label, columns: hierarchy of taxonomy for that ASV/OTU
+        agg_levels (list of str): Taxons to aggregate
+        distance_metric (str): String to pass to ssd.cdist()
+        weights (list of int): Weights of the non-ASV/OTU taxons
+
+    Returns:
+        pandas df: distance table, row and columns are sample ids
+    """
+
+    _X = rel_abundances.copy()
+    Xdist = ssd.cdist(_X, _X)
+    Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
+
+    for agg_level, weight in zip(agg_levels, weights):
+        logger.info("aggregating on %s" % agg_level)
+        Xagg = tools.aggregate_at_taxlevel(_X, taxonomy, agg_level)
+        Xagg = ssd.cdist(Xagg, Xagg, distance_metric)
+        Xagg = pd.DataFrame(Xagg, index=_X.index, columns=_X.index)
+        Xagg = Xagg * weight
+
+        Xdist = Xdist + Xagg
+
+    return Xdist
+
+
+def _save(fxn, outdir, filename, **kwargs):
+    """[summary]
+
+    Args:
+        fxn (function handle): f(Path-like object or str)
+        outdir ([type]): [description]
+        filename ([type]): [description]
+
+    Raises:
+        TypeError: [description]
+    """
+
+    if not callable(fxn):
+        raise TypeError("'fxn' passed is not callable")
+
+    if outdir is not None:
+        try:
+            outdir = Path(outdir).resolve(strict=True)
+        except (FileNotFoundError, TypeError) as e:
+            logger.warning(
+                '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
+            )
+
+    elif outdir is None:
+        outdir = Path("./results").resolve()
+        try:
+            os.mkdir(outdir)
+            logger.info("Making ./results folder...")
+        except FileExistsError:
+            logger.info("./results folder already exists")
+        except Exception as e:
+            throw_unknown_save_error(e)
+            sys.exit(2)
+
+    try:
+        fxn(os.path.join(outdir, filename), **kwargs)
+    except Exception as e:
+        throw_unknown_save_error(e)
+    else:
+        logger.info("Save successful")
+
+
 def throw_unknown_save_error(e):
-    print(e)
-    print("\nUnknown error has occured. Cannot save embedding as instructed.\n")
+    logger.exception(
+        "\nUnknown error has occured. Cannot save embedding as instructed."
+    )
     sys.exit(2)
 
 
@@ -367,11 +507,8 @@ def taxonomic_aggregation(
     ----------
 
     X : pandas.DataFrame, microbiota data table at lowers taxonomic level
-
     tax : pandas.DataFrame, taxonomy table
-
     agg_level : list; which taxonomic levels to include. Defaults to the second highest (usually phylum) and third lowest (usually family).
-
     distanceperlevel: bool, should sample-to-sample distances be calculated per tax level
 
     Returns 
@@ -392,20 +529,22 @@ def taxonomic_aggregation(
 
             # Automaticaly get the second and second-to-last agg_levels
             agg_levels = np.array(tax.columns)[[1, -2]]
-            print(agg_levels)
+            logger.info("agg_levels are {}".format([agg_levels]))
             if agg_levels[0] == agg_levels[1]:
                 # in case the taxonomy table is weird and has few columns
                 agg_levels = agg_levels[0]
-        except AssertionError as ae:
-            print("{0}".format(ae))
+        except AssertionError:
+            logger.exception(
+                "Issue occured with size of taxonomy table, or the specified agg_levels."
+            )
 
     _X = X.copy()
     if distanceperlevel:
         Xdist = ssd.cdist(_X, _X)
         Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
         for l in agg_levels:
-            print("aggregating on %s" % l)
-            Xagg = tls.aggregate_at_taxlevel(_X, tax, l)
+            logger.info("aggregating on %s" % l)
+            Xagg = tools.aggregate_at_taxlevel(_X, tax, l)
             if distanceperlevel:
                 Xagg = ssd.cdist(Xagg, Xagg, distancemetric)
                 Xagg = pd.DataFrame(Xagg, index=_X.index, columns=_X.index)
@@ -413,8 +552,8 @@ def taxonomic_aggregation(
         X = Xdist
     else:
         for l in agg_levels:
-            print("aggregating on %s" % l)
-            Xagg = tls.aggregate_at_taxlevel(_X, tax, l)
+            logger.info("aggregating on %s" % l)
+            Xagg = tools.aggregate_at_taxlevel(_X, tax, l)
             X = X.join(Xagg, lsuffix="_r")
 
         # Check to see if data was aggregated properly
@@ -426,9 +565,7 @@ def taxonomic_aggregation(
 
 
 def _name_value_error(e, fp_param, df_param):
-    print(e)
-    print()
-    print(
+    logger.exception(
         "Please provide the constructor with one of the following: a filepath to your {} file via parameter `{}`, or with an initialized variable for your {} dataframe via the parameter `{}`".format(
             df_param, fp_param, df_param, df_param
         )
@@ -497,16 +634,16 @@ def taxumap_legacy(
     """
 
     if X is None:
-        X = parse.parse_microbiome_data(fpx)
+        X = dataloading.parse_microbiome_data(fpx)
 
     # _cols = X.sum(axis=0).sort_values().tail(100).index
     # X = X[_cols]
     if tax is None:
-        tax = parse.parse_taxonomy_data(fpt)
+        tax = dataloading.parse_taxonomy_data(fpt)
 
     if asv_colors is None:
         if withusercolors:
-            asv_colors = parse.parse_asvcolor_data(fpc)
+            asv_colors = dataloading.parse_asvcolor_data(fpc)
         else:
             asv_colors = None
 
@@ -515,9 +652,9 @@ def taxumap_legacy(
 
     # scale
     if withscaling:
-        Xscaled = tls.scale(Xagg)
+        Xscaled = tools.scale(Xagg)
     else:
-        print("not scaling")
+        logger.info("not scaling")
         Xscaled = Xagg
 
     if loadembedding:
@@ -552,18 +689,14 @@ def taxumap_legacy(
         if save_embedding:
 
             if not os.path.isdir("results"):
-                print()
-                print("No results folder in current working directory.")
-                print("Will create one.")
+                logger.info(
+                    "No results folder in current working directory.\nCreating one now..."
+                )
                 os.mkdir("results")
 
             X_embedded.to_csv("results/embedded.csv")
 
     if print_figure:
-        # diversity per sample
-        # if not np.all(X.sum(axis=1) > 0):
-        #     warnings.warn("some rows have zero sum. adding tiny value (1e-16)")
-        #     X = X + 1e-16
         if print_with_diversity:
             ivs = X.apply(lambda r: 1 / np.sum(r ** 2), axis=1)
         else:
@@ -585,50 +718,83 @@ def taxumap_legacy(
 
 
 if __name__ == "__main__":
-    """Please use a '/' delimiter for weight and agg_levels"""
     import argparse
+
+    """Please use a '/' delimiter for weights and agg_levels"""
 
     parser = argparse.ArgumentParser(description="Get options for taxumap run")
     parser.add_argument(
         "-m", "--microbiota_data", help="Microbiota (rel_abundances) Table"
     )
     parser.add_argument("-t", "--taxonomy", help="Taxonomy Table")
-    parser.add_argument("-w", "--weight", help="Weights")
+    parser.add_argument("-w", "--weights", help="Weights")
     parser.add_argument("-a", "--agg_levels", help="Aggregation Levels")
+    parser.add_argument("-s", "--save", help="Set Save to True or False")
+    parser.add_argument("-o", "--outdir", help="Set directory to save embedding csv")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="To get logging at info level and higher",
+        action="count",
+    )
+
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="To get logging at debug level and higher",
+        action="count",
+    )
 
     args = parser.parse_args()
 
-    # try:
-    #     agg_levels = list(map(lambda x: x.capitalize(), args.agg_levels.split("/")))
-    # except AttributeError:
-    #     agg_levels = args.agg_levels
+    inputs = {}
+
+    # for verbose
+    if args.verbose:
+        logger = setup_logger("run_taxumap", verbose=True)
+    else:
+        logger = setup_logger("run_taxumap")
+
+    # for debug
+    if args.debug:
+        logger = setup_logger("run_taxumap", debug=True)
+    else:
+        logger = setup_logger("run_taxumap")
+
+    if args.save is not None:
+        if "True" in args.save:
+            save = True
+        elif "False" in args.save:
+            save = False
+    else:
+        save = True
 
     # AGG_LEVELS
     if args.agg_levels is not None:
-        agg_levels = list(map(lambda x: x.capitalize(), args.agg_levels.split("/")))
-    else:
-        agg_levels = args.agg_levels
+        inputs["agg_levels"] = list(
+            map(lambda x: x.capitalize(), args.agg_levels.split("/"))
+        )
 
-    # WEIGHT
-    if args.weight is not None:
-        weights = args.weight.split("/")
-        weights = list(map(lambda x: int(x), weights))
-    else:
-        weights = args.weight
+    # weights
+    if args.weights is not None:
+        weights = args.weights.split("/")
+        inputs["weights"] = list(map(lambda x: int(x), weights))
 
-    # TAX META
+    # taxonomy
     if args.taxonomy is not None:
-        fpt = args.taxonomy
+        inputs["fpt"] = args.taxonomy
     else:
-        fpt = "./data/taxonomy.csv"
+        inputs["fpt"] = "./data/taxonomy.csv"
 
     # rel_abundances
     if args.microbiota_data is not None:
-        fpx = args.microbiota_data
+        inputs["fpx"] = args.microbiota_data
     else:
-        fpx = "./data/microbiota_table.csv"
+        inputs["fpx"] = "./data/microbiota_table.csv"
 
-    t = Taxumap(agg_levels=agg_levels, weight=weights, fpt=fpt, fpx=fpx)
+    if args.outdir is not None:
+        inputs["outdir"] = args.outdir
 
-    # TODO: opt to ask for saving, default yes
-    t.transform_self()
+    taxumap = Taxumap(**inputs)
+
+    taxumap.transform_self(save=save)

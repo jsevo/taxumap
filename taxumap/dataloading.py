@@ -4,26 +4,39 @@ import os
 import sys
 import warnings
 from pathlib import Path
+import logging
 
 import numpy as np
 import pandas as pd
 import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
 
+from taxumap.custom_logging import setup_logger
+
+logger = setup_logger("dataloading")
+
 
 def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
-    """Load the microbiota data"""
+    """Attempts to load a `microbiota_table.csv` file from specified file location
+
+    Args:
+        fp (str): Path to the microbiota_table.csv file
+        idx_col (str, optional): The column in microbiota_table.csv to be used as the index. Should be either ASV/OTU. Defaults to "index_column".
+        idx_dtype (Class, optional): Data type for the index. For consistency, str is a good choice.
+
+    Returns:
+        Pandas df: a properly-formatted rel_abundances df
+    """
 
     fp = Path(fp)
 
     # There's probably a better way of doing this test -
     # fp.resolve(strict=True) will error if file does not exist?
     try:
-        f = fp.resolve(strict=True)
+        _ = fp.resolve(strict=True)
 
-    except FileNotFoundError as fe:
-        print("{0}".format(fe))
-        print(
+    except FileNotFoundError:
+        logger.exception(
             "The microbiota composition table should be located in the data/ subfolder and named microbiota_table.csv"
         )
         sys.exit(2)
@@ -42,20 +55,19 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
 
             return X.fillna(0)
 
-        except ValueError as ve:
-            print("{0}".format(ve))
-            print(
+        except ValueError:
+            logger.exception(
                 "Please make sure the microbiota_table has a column labeled 'index_column' which contains the sample IDs"
             )
         except:
-            print(
+            logger.exception(
                 "An unknown error occurred during microbiota_table parsing. Please see the instructions for how to run taxumap."
             )
 
 
 def check_if_compositional(X, name=""):
     if not np.allclose(X.sum(axis=1), 1):
-        warnings.warn(
+        logger.warning(
             "Rows in the {} dataframe do not sum to 1. Is this intentional?".format(
                 name
             )
@@ -77,14 +89,11 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
         try:
             fp = fp.resolve(strict=True)
 
-        except FileNotFoundError as fe:
-            print("{0}".format(fe))
-            print(
-                "If using default settings, please make sure /n \
-                that the taxonomy table is located in the 'data/' subfolder and named 'taxonomy.csv /n'"
-            )
-            print(
-                "Otherwise, please make sure that you are directing taxumap \
+        except FileNotFoundError:
+            logger.exception(
+                "If using default settings, please make sure\n \
+                that the taxonomy table is located in the 'data/' subfolder and named 'taxonomy.csv\n \
+                Otherwise, please make sure that you are directing taxumap\n\
                     to the proper location of your taxonomy file."
             )
             sys.exit(2)
@@ -93,20 +102,18 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
         try:
             tax = pd.read_csv(fp)
 
-            print()
-            print(
-                "Reading taxonomy table. Assuming columns are ordered by phylogeny with in descending order of hierarchy:"
+            logger.info(
+                "Reading taxonomy table. Assuming columns are ordered by phylogeny with in descending order of hierarchy:\n \
+                e.g. Kingdom, Phylum, ... , Genus, Species, etc.\n \
+                Additionally, the OTU or ASV column must be labeled as 'OTU' or 'ASV' unless otherwise specified"
             )
-            print("e.g. Kingdom, Phylum, ... , Genus, Species, etc.")
-            print()
-            print("The OTU or ASV column must be labeled as 'OTU' or 'ASV'.")
 
-        except (IsADirectoryError, pd.errors.ParserError, FileNotFoundError) as e:
-            print(e)
-            print(
+        except (IsADirectoryError, pd.errors.ParserError, FileNotFoundError):
+            logger.exception(
                 "Your file path may be pointing to a file that doesn't exist, or \
                 simply to a directory. Please re-check your file path."
             )
+
             sys.exit(2)
 
         # Set index to ASV/OTU
@@ -120,9 +127,8 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
 
             tax.columns = map(str.capitalize, tax.columns)
 
-        except ValueError as e:
-            print(e)
-            print("ASV/OTU not found in your columns")
+        except ValueError:
+            logger.exception("ASV/OTU not found in your columns")
             sys.exit(2)
 
         else:
@@ -130,20 +136,20 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
             return tax
 
     except:
-        print(
+        logger.critical(
             "An unknown error occurred during taxonomy table parsing. Please see the documentation for how to run taxumap."
         )
 
 
 def check_tax_is_consistent(df):
     if np.any(df.isna()):
-        warnings.warn(
+        logger.warning(
             "Missing values (NaN) found for some taxonomy levels, you should consider filling with higher taxonomic level names. Please consult the documentation for best way to move forward."
         )
 
     # should we just read_csv() and only allow certain datatypes (i.e. str, obj?)
     if any(df.dtypes == (int, float)):
-        warnings.warn(
+        logger.warning(
             "Your taxonomy table contains columns may contain numerical data. Please consult documentation because you may have incorrectly formatted your dataframe."
         )
 
@@ -158,41 +164,39 @@ def parse_asvcolor_data(fp):
         fp = Path(fp)
         try:
             f = fp.resolve(strict=True)
-        except FileNotFoundError as fe:
-            print("{0}".format(fe))
-            print(
+        except FileNotFoundError:
+            logger.exception(
                 "The color per ASV table should be located in the data/ subfolder and named asvcolors.csv"
             )
             sys.exit(2)
         if f.is_file():
             try:
                 taxcolors = pd.read_csv(fp)
-                print("Reading color per ASV table.")
+                logger.info("Reading color per ASV table.")
                 try:
                     assert taxcolors.columns[[0, 1]].to_list() == ["ASV", "HexColor"]
                 except AssertionError:
-                    print(
+                    logger.exception(
                         'Column names should be:  ["ASV", "HexColor"]. Choosing colors automatically.'
                     )
                     return ()
 
                 taxcolors = taxcolors.set_index("ASV")
                 if np.any(taxcolors.isna()):
-                    warnings.warn(
+                    logger.warning(
                         "Missing values (NaN) found for some taxcolors. Filling with 'grey'"
                     )
                     taxcolors = taxcolors.fillna("grey")
                 return taxcolors
-            except ValueError as ve:
-                print("{0}".format(ve))
-                print(
+            except ValueError:
+                logger.exception(
                     "Please make sure the taxcolors has columns labeled ['ASV','HexColor'], and contain as values the ASV labels as strings and valid hex color stings"
                 )
             except:
-                print(
+                logger.error(
                     "Please make sure the taxcolors has columns labeled ['ASV','HexColor'], and contain as values the ASV labels as strings and valid hex color stings"
                 )
     elif type(fp) is pd.DataFrame:
-        print("using provided taxcolors")
+        logger.info("using provided taxcolors")
         taxcolors = fp
         return taxcolors
