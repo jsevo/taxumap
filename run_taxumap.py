@@ -15,6 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--agg_levels", help="Aggregation Levels")
     parser.add_argument("-s", "--save", help="Set Save to True or False")
     parser.add_argument("-o", "--outdir", help="Set directory to save embedding csv")
+
     parser.add_argument(
         "-v",
         "--verbose",

@@ -75,9 +75,26 @@ class Taxumap:
                 logger.info("Recognized `rel_abundances` parameter as Pandas DataFrame")
                 self.fpx = None
                 self.rel_abundances = rel_abundances
+
+                try:
+                    self.rel_abundances.set_index("index_column")
+                except KeyError:
+                    # if it can't set the index to 'index_column', maybe it's already set
+                    if self.rel_abundances.index.name != "index_column":
+                        logger.exception(
+                            "Your rel_abundances df needs to contain 'index_column' for its 'ASV' or 'OTU' column"
+                        )
+                        sys.exit(2)
+                else:
+                    logger.info(
+                        "index_column has been set as index for self.rel_abundances"
+                    )
+
                 dataloading.check_if_compositional(
-                    rel_abundaces, name="locally-supplied microbiota (rel_abundances)"
+                    self.rel_abundances,
+                    name="locally-supplied microbiota (rel_abundances)",
                 )
+
             elif isinstance(fpx, str):
                 self.fpx = fpx
                 self.rel_abundances = dataloading.parse_microbiome_data(fpx)
