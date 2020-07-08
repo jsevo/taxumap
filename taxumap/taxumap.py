@@ -287,7 +287,9 @@ class Taxumap:
 
         return self
 
-    def transform_self(self, scale=False, debug=False, save=False, outdir=None):
+    def transform_self(
+        self, scale=False, debug=False, save=False, outdir=None, **kwargs
+    ):
         """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
 
         Args:
@@ -297,9 +299,22 @@ class Taxumap:
             pickle (bool, optional): If True, will save self object as a pickle. Defaults to False.
         """
 
-        # Default parameters from old legacy file
-        neigh = 120
-        min_dist = 0.2
+        # Maybe better way of implementing this
+        if "neigh" in kwargs:
+            neigh = kwargs["neigh"]
+        else:
+            # TODO: Add in documentation guideance on neigh
+            logger.warning(
+                "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
+            )
+            neigh = 120
+
+        if "min_dist" in kwargs:
+            min_dist = kwargs["min_dist"]
+        else:
+            logger.info("Setting min_dist to 0.2")
+            min_dist = 0.2
+
         distance_metric = "braycurtis"
 
         # Shouldn't need `try...except` because any Taxumap object should have proper attributes
