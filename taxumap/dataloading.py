@@ -74,7 +74,7 @@ def check_if_compositional(X, name=""):
         )
 
 
-def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
+def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"], idx_dtype=str):
     """Load the taxonomy data."""
 
     fp = Path(fp)
@@ -133,6 +133,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"]):
 
         else:
             check_tax_is_consistent(tax)
+            tax.index = tax.index.astype(str)
             return tax
 
     except:
