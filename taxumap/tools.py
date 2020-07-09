@@ -1,4 +1,3 @@
-from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
 import os
 
 #!/usr/bin/env python
