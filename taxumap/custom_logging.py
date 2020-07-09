@@ -2,6 +2,9 @@ import logging
 import os
 from pathlib import Path
 
+# TODO: The pwd default thing isnt working, probably os.path.join() doesnt work with log_dir = "./".
+# Use getcwd next time
+
 
 def setup_logger(name, verbose=False, debug=False, base_dir=None):
 
