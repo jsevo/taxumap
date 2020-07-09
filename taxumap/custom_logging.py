@@ -16,7 +16,7 @@ def setup_logger(name, verbose=False, debug=False, base_dir=None):
 
     # save to log folder unless it doesn't exist
     try:
-        log_dir = Path(os.path.join(base_dir, "log")).resolve(strict=True)
+        log_dir = Path(os.path.join(base_dir, "logs")).resolve(strict=True)
     except (TypeError, FileNotFoundError):
         logger.info("No directory log found in pwd. Saving to pwd.")
         log_dir = "./"
