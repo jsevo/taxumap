@@ -133,7 +133,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"], idx_dtype=str):
 
         else:
             check_tax_is_consistent(tax)
-            tax.index = tax.index.astype(str)
+            tax.index = tax.index.astype(idx_dtype)
             return tax
 
     except:
