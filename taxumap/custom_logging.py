@@ -1,7 +1,9 @@
 import logging
+import os
+from pathlib import Path
 
 
-def setup_logger(name, verbose=False, debug=False):
+def setup_logger(name, verbose=False, debug=False, base_dir=None):
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -12,8 +14,15 @@ def setup_logger(name, verbose=False, debug=False):
 
     stream_format = logging.Formatter("%(funcName)s:%(levelname)s\n%(message)s\n")
 
+    # save to log folder unless it doesn't exist
+    try:
+        log_dir = Path(os.path.join(base_dir, "log")).resolve(strict=True)
+    except (TypeError, FileNotFoundError):
+        logger.info("No directory log found in pwd. Saving to pwd.")
+        log_dir = "./"
+
     # file handler for warning and above
-    fh_warning = logging.FileHandler(name + "_warnings.log")
+    fh_warning = logging.FileHandler(os.path.join(log_dir, name + "_warnings.log"))
     fh_warning.setLevel(logging.WARNING)
     fh_warning.setFormatter(general_format)
 
@@ -27,14 +36,14 @@ def setup_logger(name, verbose=False, debug=False):
 
     if verbose:
         # set file handler for info and above
-        fh_info = logging.FileHandler(name + "_info.log")
+        fh_info = logging.FileHandler(os.path.join(log_dir, name + "_info.log"))
         fh_info.setLevel(logging.INFO)
         fh_info.setFormatter(general_format)
         logger.addHandler(fh_info)
 
     if debug:
         # set file handler for debug and above
-        fh_debug = logging.FileHandler(name + "_debug.log")
+        fh_debug = logging.FileHandler(os.path.join(log_dir, name + "_debug.log"))
         fh_debug.setLevel(logging.DEBUG)
         fh_debug.setFormatter(general_format)
         logger.addHandler(fh_debug)
