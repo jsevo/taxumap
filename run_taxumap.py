@@ -17,7 +17,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--outdir", help="Set directory to save embedding csv")
 
     parser.add_argument("-n", "--neigh", help="Sets the neighbors parameter for UMAP")
-    parser.add_argument("-d", "--min_dist", help="Sets the min_dist parameter for UMAP")
+    parser.add_argument("-b", "--min_dist", help="Sets the min_dist parameter for UMAP")
 
     parser.add_argument(
         "-v",
