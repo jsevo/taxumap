@@ -16,6 +16,9 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--save", help="Set Save to True or False")
     parser.add_argument("-o", "--outdir", help="Set directory to save embedding csv")
 
+    parser.add_argument("-n", "--neigh", help="Sets the neighbors parameter for UMAP")
+    parser.add_argument("-d", "--min_dist", help="Sets the min_dist parameter for UMAP")
+
     parser.add_argument(
         "-v",
         "--verbose",
@@ -33,7 +36,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     inputs = {}
+    transform_inputs = {}
 
+    # setup logger
     # for verbose
     if args.verbose:
         logger = setup_logger("run_taxumap", verbose=True)
@@ -45,6 +50,21 @@ if __name__ == "__main__":
         logger = setup_logger("run_taxumap", debug=True)
     else:
         logger = setup_logger("run_taxumap")
+
+    # for neigh
+    if args.neigh is not None:
+        try:
+            transform_inputs["neigh"] = int(args.neigh)
+        except:
+            logger.warning("--neigh/-n must be an integer")
+
+    # for min_dist
+    # TODO: Are there any other requirements for `min_dist`?
+    if args.min_dist is not None:
+        try:
+            transform_inputs["min_dist"] = float(args.min_dist)
+        except:
+            logger.warning("--min_dist/-n must be a float")
 
     if args.save is not None:
         if "True" in args.save:
@@ -81,4 +101,4 @@ if __name__ == "__main__":
         inputs["outdir"] = args.outdir
 
     taxumap = Taxumap(**inputs)
-    taxumap.transform_self(save=save)
+    taxumap.transform_self(save=save, **transform_inputs)
