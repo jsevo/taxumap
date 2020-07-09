@@ -7,6 +7,7 @@ if __name__ == "__main__":
     """Please use a '/' delimiter for weights and agg_levels"""
 
     parser = argparse.ArgumentParser(description="Get options for taxumap run")
+
     parser.add_argument(
         "-m", "--microbiota_data", help="Microbiota (rel_abundances) Table"
     )
