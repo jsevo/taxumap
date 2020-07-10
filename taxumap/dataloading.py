@@ -22,7 +22,7 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
     Args:
         fp (str): Path to the microbiota_table.csv file
         idx_col (str, optional): The column in microbiota_table.csv to be used as the index. Should be either ASV/OTU. Defaults to "index_column".
-        idx_dtype (Class, optional): Data type for the index. For consistency, str is a good choice.
+        idx_dtype (dtype, optional): Data type for the index. For consistency, str is a good choice. Defaults to str.
 
     Returns:
         Pandas df: a properly-formatted rel_abundances df
@@ -63,15 +63,6 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
             logger.exception(
                 "An unknown error occurred during microbiota_table parsing. Please see the instructions for how to run taxumap."
             )
-
-
-def check_if_compositional(X, name=""):
-    if not np.allclose(X.sum(axis=1), 1):
-        logger.warning(
-            "Rows in the {} dataframe do not sum to 1. Is this intentional?".format(
-                name
-            )
-        )
 
 
 def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"], idx_dtype=str):
@@ -139,6 +130,15 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"], idx_dtype=str):
     except:
         logger.critical(
             "An unknown error occurred during taxonomy table parsing. Please see the documentation for how to run taxumap."
+        )
+
+
+def check_if_compositional(X, name=""):
+    if not np.allclose(X.sum(axis=1), 1):
+        logger.warning(
+            "Rows in the {} dataframe do not sum to 1. Is this intentional?".format(
+                name
+            )
         )
 
 

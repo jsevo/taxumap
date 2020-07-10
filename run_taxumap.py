@@ -84,7 +84,7 @@ if __name__ == "__main__":
     # weights
     if args.weights is not None:
         weights = args.weights.split("/")
-        inputs["weights"] = list(map(lambda x: int(x), weights))
+        inputs["weights"] = np.array(weights, dtype=np.float)
 
     # taxonomy
     if args.taxonomy is not None:

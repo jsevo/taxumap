@@ -76,20 +76,28 @@ class Taxumap:
                 self.fpx = None
                 self.rel_abundances = rel_abundances
 
+                # Validate the rel_abundances dataset
                 try:
                     self.rel_abundances.set_index("index_column")
                 except KeyError:
                     # if it can't set the index to 'index_column', maybe it's already set
+                    # let's check to see if that is not the case
                     if self.rel_abundances.index.name != "index_column":
                         logger.exception(
                             "Your rel_abundances df needs to contain 'index_column' for its 'ASV' or 'OTU' column"
                         )
                         sys.exit(2)
+                    else:
+                        logger.info(
+                            "Your rel_abundances dataframe already had 'index_column' as the index."
+                        )
+
                 else:
                     logger.info(
                         "index_column has been set as index for self.rel_abundances"
                     )
 
+                # lastly, quickly check if the data is compositional.
                 dataloading.check_if_compositional(
                     self.rel_abundances,
                     name="locally-supplied microbiota (rel_abundances)",

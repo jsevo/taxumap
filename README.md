@@ -20,7 +20,7 @@ pip install -e phylo-umap
 ```bash
 python phylo-umap/run_taxumap.py -t taxonomy.csv -m microbiota_table.csv -n 15
 ```
-Your embedding will be saved in `results` folder. 
+Your embedding will be saved in the `phylo-umap/results/` folder. 
 
 
 ### Python:
@@ -107,7 +107,7 @@ The ***taxonomy table*** (`taxonomy.csv`) is expected to resolve higher taxonomi
 | :---       | :---:        | :---: | :---:  |
 | 'Bacteria' | 'Firmicutes' | ...   | 'ASV1' |
 
-Unless designated by the `-t` and `-m` flags, the data is expected to be within the `data/` folder. Results are written to the `results/` folder.
+Unless designated by the `-t` and `-m` flags, the data is expected to be within the `data/` folder. Results are written to the `phylo-umap/results/` folder.
 
 ---
 
