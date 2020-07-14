@@ -286,11 +286,28 @@ class Taxumap:
 
         return df_final
 
-    def pickle(self, outdir):
+    @classmethod
+    def from_pickle(cls, fp):
+        import pickle
+
+        try:
+            with open(fp, "rb") as f:
+                data = pickle.load(f)
+        except Exception:
+            logger.exception("Something went wrong loading from pickle")
+        else:
+            logger.info("Successfully located pickle file")
+
+        return data
+
+    def to_pickle(self, outdir=".", name=None):
 
         import pickle
 
-        with open(os.path.join(outdir, self._embedded_pickle_name), "wb") as f:
+        if name is None:
+            name = self._embedded_pickle_name
+
+        with open(os.path.join(outdir, name), "wb") as f:
             pickle.dump(self, f)
 
         return self
@@ -379,6 +396,8 @@ class Taxumap:
         )
         ax.set_xlabel(self.taxumap1)
         ax.set_ylabel(self.taxumap2)
+
+        ax.set_title(self.name)
 
         sns.despine(trim=True, offset=5)
 
