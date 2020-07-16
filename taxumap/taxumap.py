@@ -84,7 +84,7 @@ class Taxumap:
                     # let's check to see if that is not the case
                     if self.rel_abundances.index.name != "index_column":
                         logger.exception(
-                            "Your rel_abundances df needs to contain 'index_column' for its 'ASV' or 'OTU' column"
+                            "Your rel_abundances df needs to contain 'index_column' containing sample identifiers of each row containing relative OTU/ASV abundances"
                         )
                         sys.exit(2)
                     else:
