@@ -16,6 +16,13 @@ def aggregate_at_taxlevel(X, tax, level):
     _X_agg = X.copy()
     _X_agg.columns = [tax.loc[x][level] for x in _X_agg.columns]
     _X_agg = _X_agg.groupby(_X_agg.columns, axis=1).sum()
+    try:
+        assert np.allclose(
+            _X_agg.sum(axis=1), 1.0
+        ), "At taxonomic aggregation level %s, rows do not sum to 1."
+    except AssertionError:
+        print("moving on anyway")
+
     return _X_agg
 
 

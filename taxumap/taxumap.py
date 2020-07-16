@@ -475,7 +475,7 @@ def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
     """
 
     _X = rel_abundances.copy()
-    Xdist = ssd.cdist(_X, _X)
+    Xdist = ssd.cdist(_X, _X, distance_metric)
     Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
 
     for agg_level, weight in zip(agg_levels, weights):
@@ -545,5 +545,3 @@ def _name_value_error(e, fp_param, df_param):
             df_param, fp_param, df_param, df_param
         )
     )
-
-
