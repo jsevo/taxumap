@@ -113,9 +113,8 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"], idx_dtype=str):
                 tax.set_index("ASV", inplace=True)
             else:
                 tax.set_index("OTU")
-                #TODO: This is a hack: we should not rely on ASV as the index here, but right now, other functionalities such as colors are. should make sure we fix everywhere and use "SEQ" globally, replacing ASV/OTU, and perhaps re-naming to ASV/OTU as was provided.
-                tax.index.name = "ASV" 
-
+                # TODO: This is a hack: we should not rely on ASV as the index here, but right now, other functionalities such as colors are. should make sure we fix everywhere and use "SEQ" globally, replacing ASV/OTU, and perhaps re-naming to ASV/OTU as was provided.
+                tax.index.name = "ASV"
             tax.columns = map(str.capitalize, tax.columns)
 
         except ValueError:

@@ -13,21 +13,22 @@ from pathlib import Path
 import matplotlib as mpl
 import numpy as np
 import pandas as pd
-import scipy.spatial.distance as ssd
 import seaborn as sns
+
 from matplotlib import pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
 from umap import UMAP
 
 import taxumap.dataloading as dataloading
 import taxumap.tools as tools
 import taxumap.visualizations as viz
 from taxumap.custom_logging import setup_logger
+from taxumap._taxumap import TaxumapMixin, _save
+from taxumap.errors import throw_unknown_save_error, _name_value_error
 
 logger = setup_logger("taxumap", verbose=False, debug=False)
 
 
-class Taxumap:
+class Taxumap(TaxumapMixin):
     """Taxumap object for running taxUMAP algorithm"""
 
     def __init__(
@@ -137,104 +138,71 @@ class Taxumap:
         else:
             self.name = None
 
-    @property
-    def _exist_tax_meta_df(self):
-        return isinstance(self.taxonomy, pd.DataFrame)
+    def transform_self(
+        self, scale=False, debug=False, save=False, outdir=None, **kwargs
+    ):
+        """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
 
-    @property
-    def _exist_tax_df(self):
-        return isinstance(self.rel_abundances, pd.DataFrame)
+        Args:
+            debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
+            save (bool, optional): If True, will attempt to save the resulting embedded as a csv file. Defaults to False.
+            outdir (str, optional): Path to where files should be saved, if save=True. Defaults to None.
+            pickle (bool, optional): If True, will save self object as a pickle. Defaults to False.
+        """
 
-    @property
-    def _exist_tax_meta_fp(self):
-        """Returns true if the `fpt` parameter is a valid filepath"""
-        try:
-            logic = Path(self.fpt).is_file()
-        except TypeError:
-            return False
+        # Maybe better way of implementing this
+        if "neigh" in kwargs:
+            neigh = kwargs["neigh"]
         else:
-            return logic
-
-    @property
-    def _exist_tax_fp(self):
-        """Returns true if the `fpx` parameter is a valid filepath"""
-        try:
-            logic = Path(self.fpx).is_file()
-        except TypeError:
-            return False
-        else:
-            return logic
-
-    @property
-    def _is_df_loaded(self):
-        """Returns true if the object was initialized with df objects"""
-        return all((self._exist_tax_df, self._exist_tax_meta_df)) and not all(
-            (self._exist_tax_fp, self._exist_tax_meta_fp)
-        )
-
-    @property
-    def _is_fp_loaded(self):
-        """Returns true if the object was initialized with filepaths, or
-        if all such pre-requisites exist"""
-        return all(
-            (
-                self._exist_tax_df,
-                self._exist_tax_fp,
-                self._exist_tax_meta_fp,
-                self._exist_tax_meta_df,
+            # TODO: Add in documentation guideance on neigh
+            logger.warning(
+                "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
+            neigh = 120 if len(self.rel_abundances) > 120 else len(self.rel_abundances)
+
+        if "min_dist" in kwargs:
+            min_dist = kwargs["min_dist"]
+        else:
+            logger.info("Setting min_dist to 0.05/sum(weights)")
+            min_dist = 0.05 / np.sum(self.weights)
+
+        if "epochs" in kwargs:
+            epochs = kwargs["epochs"]
+        else:
+            epochs = (
+                5000
+                if neigh < 120
+                else (1000 if len(self.rel_abundances) < 5000 else 1000)
+            )
+            logger.info("Setting epochs to %d" % epochs)
+
+        distance_metric = "braycurtis"
+
+        # Shouldn't need `try...except` because any Taxumap object should have proper attributes
+        Xagg = tools.tax_agg(
+            self.rel_abundances,
+            self.taxonomy,
+            self.agg_levels,
+            distance_metric,
+            self.weights,
         )
 
-    @property
-    def _embedded_csv_name(self):
-        """Filename for saving self.embedded to a csv file. Uses self.name if available."""
-        if isinstance(self.name, str):
-            return "_".join([self.name, "embedded.csv"])
-        else:
-            return "embedded.csv"
+        self.taxumap = UMAP(
+            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed"
+        ).fit(Xagg)
 
-    @property
-    def _embedded_pickle_name(self):
-        """Filename for saving self to a pickle. Uses self.name if available."""
-        if isinstance(self.name, str):
-            return "_".join([self.name, "taxumap_pickle.pickle"])
-        else:
-            return "taxumap_pickle.pickle"
+        self.embedding = self.taxumap.transform(Xagg)
+        # self._is_transformed = True
 
-    @property
-    def _plot_name(self, ext="png"):
-        """Filename for saving a plot to file. Uses self.name if available."""
-        if isinstance(self.name, str):
-            return "_".join([self.name, "plot." + ext])
-        else:
-            return "plot." + ext
+        self.index = Xagg.index
 
-    @property
-    def taxumap1(self):
-        """Get a label for first dimension of taxUMAP embedded space"""
-        first_letters = [agg_level[0] for agg_level in self.agg_levels]
-        initials = "".join(first_letters)
-        return "taxumap-{}-1".format(initials)
+        if debug:
+            self.Xagg = Xagg
 
-    @property
-    def taxumap2(self):
-        """Get a label for second dimension of taxUMAP embedded space"""
-        first_letters = [agg_level[0] for agg_level in self.agg_levels]
-        initials = "".join(first_letters)
-        return "taxumap-{}-2".format(initials)
+        if save:
+            self.save_embedding(outdir=outdir)
 
-    @property
-    def _is_transformed(self):
-        """Returns True if Taxumap.transform_self() has been previously run"""
-        try:
-            if isinstance(self.embedding, np.ndarray):
-                return True
-            else:
-                logger.warning(
-                    "taxumap.embedding is not an ndarray, something went wrong"
-                )
-        except AttributeError:
-            return False
+        return self
 
     @property
     def df_embedding(self):
@@ -285,106 +253,6 @@ class Taxumap:
         df_final = df_final.reset_index().set_index("index_column")
 
         return df_final
-
-    @classmethod
-    def from_pickle(cls, fp):
-        import pickle
-
-        try:
-            with open(fp, "rb") as f:
-                data = pickle.load(f)
-        except Exception:
-            logger.exception("Something went wrong loading from pickle")
-        else:
-            logger.info("Successfully located pickle file")
-
-        return data
-
-    def to_pickle(self, outdir=".", name=None):
-
-        import pickle
-
-        if name is None:
-            name = self._embedded_pickle_name
-
-        with open(os.path.join(outdir, name), "wb") as f:
-            pickle.dump(self, f)
-
-        return self
-
-    def transform_self(
-        self, scale=False, debug=False, save=False, outdir=None, **kwargs
-    ):
-        """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
-
-        Args:
-            debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
-            save (bool, optional): If True, will attempt to save the resulting embedded as a csv file. Defaults to False.
-            outdir (str, optional): Path to where files should be saved, if save=True. Defaults to None.
-            pickle (bool, optional): If True, will save self object as a pickle. Defaults to False.
-        """
-
-        # Maybe better way of implementing this
-        if "neigh" in kwargs:
-            neigh = kwargs["neigh"]
-        else:
-            # TODO: Add in documentation guideance on neigh
-            logger.warning(
-                "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
-            )
-            neigh = 120 if len(self.rel_abundances)>120 else len(self.rel_abundances)
-
-        if "min_dist" in kwargs:
-            min_dist = kwargs["min_dist"]
-        else:
-            logger.info("Setting min_dist to 0.05/sum(weights)")
-            min_dist = .05/np.sum(self.weights)
-
-        if "epochs" in kwargs:
-            epochs = kwargs["epochs"]
-        else:
-            epochs = 5000 if neigh<120 else (1000 if len(self.rel_abundances)<5000 else 1000)  
-            logger.info("Setting epochs to %d"%epochs)
-
-        distance_metric = "braycurtis"
-
-        # Shouldn't need `try...except` because any Taxumap object should have proper attributes
-        Xagg = tax_agg(
-            self.rel_abundances,
-            self.taxonomy,
-            self.agg_levels,
-            distance_metric,
-            self.weights,
-        )
-
-        self.taxumap = UMAP(
-            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed"
-        ).fit(Xagg)
-
-        self.embedding = self.taxumap.transform(Xagg)
-        # self._is_transformed = True
-        self.index = Xagg.index
-
-        if debug:
-            self.Xagg = Xagg
-
-        if save:
-            self.save_embedding(outdir=outdir)
-
-        return self
-
-    def save_embedding(self, outdir=None):
-
-        try:
-            _save(self.df_embedding.to_csv, outdir, self._embedded_csv_name)
-        except AttributeError as e:
-            logger.warning(
-                "\nEmbedding not currently populated. Please run taxumap.Taxumap.transform_self(save=True).\n"
-            )
-        except Exception as e:
-            throw_unknown_save_error(e)
-
-        return self
 
     def scatter(
         self, figsize=(16, 10), save=False, outdir=None, ax=None, fig=None, **kwargs
@@ -463,96 +331,3 @@ class Taxumap:
 
         else:
             return repr(self)
-
-
-def _test_variables(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
-    return rel_abundances, taxonomy, agg_levels, distance_metric, weights
-
-
-def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
-    """Generates a distance matrix aggregated on each designated taxon
-
-    Args:
-        rel_abundances (Pandas df): Relative abundance df with row-wise compositional data, row: sample, columns: OTU/ASV label
-        taxonomy (Pandas df): Row: OTU/ASV label, columns: hierarchy of taxonomy for that ASV/OTU
-        agg_levels (list of str): Taxons to aggregate
-        distance_metric (str): String to pass to ssd.cdist()
-        weights (list of int): Weights of the non-ASV/OTU taxons
-
-    Returns:
-        pandas df: distance table, row and columns are sample ids
-    """
-
-    _X = rel_abundances.copy()
-    # remove columns that are always zero
-    _X = _X.loc[:, (_X != 0).any(axis=0)]
-    Xdist = ssd.cdist(_X, _X, distance_metric)
-    Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
-
-    for agg_level, weight in zip(agg_levels, weights):
-        logger.info("aggregating on %s" % agg_level)
-        Xagg = tools.aggregate_at_taxlevel(_X, taxonomy, agg_level)
-        Xagg = ssd.cdist(Xagg, Xagg, distance_metric)
-        Xagg = pd.DataFrame(Xagg, index=_X.index, columns=_X.index)
-        Xagg = Xagg * weight
-
-        Xdist = Xdist + Xagg
-
-    return Xdist
-
-
-def _save(fxn, outdir, filename, **kwargs):
-    """[summary]
-
-    Args:
-        fxn (function handle): f(Path-like object or str)
-        outdir ([type]): [description]
-        filename ([type]): [description]
-
-    Raises:
-        TypeError: [description]
-    """
-
-    if not callable(fxn):
-        raise TypeError("'fxn' passed is not callable")
-
-    if outdir is not None:
-        try:
-            outdir = Path(outdir).resolve(strict=True)
-        except (FileNotFoundError, TypeError) as e:
-            logger.warning(
-                '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
-            )
-
-    elif outdir is None:
-        outdir = Path("./results").resolve()
-        try:
-            os.mkdir(outdir)
-            logger.info("Making ./results folder...")
-        except FileExistsError:
-            logger.info("./results folder already exists")
-        except Exception as e:
-            throw_unknown_save_error(e)
-            sys.exit(2)
-
-    try:
-        fxn(os.path.join(outdir, filename), **kwargs)
-    except Exception as e:
-        throw_unknown_save_error(e)
-    else:
-        logger.info("Save successful")
-
-
-def throw_unknown_save_error(e):
-    logger.exception(
-        "\nUnknown error has occured. Cannot save embedding as instructed."
-    )
-    sys.exit(2)
-
-
-def _name_value_error(e, fp_param, df_param):
-    logger.exception(
-        "Please provide the constructor with one of the following: a filepath to your {} file via parameter `{}`, or with an initialized variable for your {} dataframe via the parameter `{}`".format(
-            df_param, fp_param, df_param, df_param
-        )
-    )
