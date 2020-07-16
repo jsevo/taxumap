@@ -475,6 +475,8 @@ def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
     """
 
     _X = rel_abundances.copy()
+    # remove columns that are always zero
+    _X = _X.loc[:, (_X != 0).any(axis=0)]
     Xdist = ssd.cdist(_X, _X, distance_metric)
     Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
 
