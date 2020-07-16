@@ -332,13 +332,19 @@ class Taxumap:
             logger.warning(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
-            neigh = 120
+            neigh = 120 if len(self.rel_abundances)>120 else len(self.rel_abundances)
 
         if "min_dist" in kwargs:
             min_dist = kwargs["min_dist"]
         else:
-            logger.info("Setting min_dist to 0.2")
-            min_dist = 0.2
+            logger.info("Setting min_dist to 0.05/sum(weights)")
+            min_dist = .05/np.sum(self.weights)
+
+        if "epochs" in kwargs:
+            epochs = kwargs["epochs"]
+        else:
+            epochs = 5000 if neigh<120 else (1000 if len(self.rel_abundances)<5000 else 1000)  
+            logger.info("Setting epochs to %d"%epochs)
 
         distance_metric = "braycurtis"
 
@@ -352,7 +358,7 @@ class Taxumap:
         )
 
         self.taxumap = UMAP(
-            n_neighbors=neigh, min_dist=min_dist, metric="precomputed"
+            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed"
         ).fit(Xagg)
 
         self.embedding = self.taxumap.transform(Xagg)
