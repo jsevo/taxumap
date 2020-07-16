@@ -11,7 +11,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 from taxumap.custom_logging import setup_logger
 
-logger = setup_logger("tools", verbose=False, debug=False)
+logger_tools = setup_logger("tools", verbose=False, debug=False)
 
 
 def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
@@ -35,7 +35,7 @@ def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
     Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
 
     for agg_level, weight in zip(agg_levels, weights):
-        logger.info("aggregating on %s" % agg_level)
+        logger_tools.info("aggregating on %s" % agg_level)
         Xagg = aggregate_at_taxlevel(_X, taxonomy, agg_level)
         Xagg = ssd.cdist(Xagg, Xagg, distance_metric)
         Xagg = pd.DataFrame(Xagg, index=_X.index, columns=_X.index)

@@ -9,7 +9,7 @@ from taxumap.custom_logging import setup_logger
 from taxumap.errors import throw_unknown_save_error, _name_value_error
 
 
-logger = setup_logger("taxumap_mixin", verbose=False, debug=False)
+logger_taxumapmixins = setup_logger("taxumap_mixin", verbose=False, debug=False)
 
 
 class TaxumapMixin:
@@ -93,9 +93,9 @@ class TaxumapMixin:
             with open(fp, "rb") as f:
                 data = pickle.load(f)
         except Exception:
-            logger.exception("Something went wrong loading from pickle")
+            logger_taxumapmixins.exception("Something went wrong loading from pickle")
         else:
-            logger.info("Successfully located pickle file")
+            logger_taxumapmixins.info("Successfully located pickle file")
 
         return data
 
@@ -132,7 +132,7 @@ class TaxumapMixin:
             if isinstance(self.embedding, np.ndarray):
                 return True
             else:
-                logger.warning(
+                logger_taxumapmixins.warning(
                     "taxumap.embedding is not an ndarray, something went wrong"
                 )
         except AttributeError:
@@ -143,7 +143,7 @@ class TaxumapMixin:
         try:
             _save(self.df_embedding.to_csv, outdir, self._embedded_csv_name)
         except AttributeError as e:
-            logger.warning(
+            logger_taxumapmixins.warning(
                 "\nEmbedding not currently populated. Please run taxumap.Taxumap.transform_self(save=True).\n"
             )
         except Exception as e:
@@ -171,7 +171,7 @@ def _save(fxn, outdir, filename, **kwargs):
         try:
             outdir = Path(outdir).resolve(strict=True)
         except (FileNotFoundError, TypeError) as e:
-            logger.warning(
+            logger_taxumapmixins.warning(
                 '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
             )
 
@@ -179,9 +179,9 @@ def _save(fxn, outdir, filename, **kwargs):
         outdir = Path("./results").resolve()
         try:
             os.mkdir(outdir)
-            logger.info("Making ./results folder...")
+            logger_taxumapmixins.info("Making ./results folder...")
         except FileExistsError:
-            logger.info("./results folder already exists")
+            logger_taxumapmixins.info("./results folder already exists")
         except Exception as e:
             throw_unknown_save_error(e)
             sys.exit(2)
@@ -191,5 +191,5 @@ def _save(fxn, outdir, filename, **kwargs):
     except Exception as e:
         throw_unknown_save_error(e)
     else:
-        logger.info("Save successful")
+        logger_taxumapmixins.info("Save successful")
 

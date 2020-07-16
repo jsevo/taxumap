@@ -25,7 +25,7 @@ from taxumap.custom_logging import setup_logger
 from taxumap._taxumap import TaxumapMixin, _save
 from taxumap.errors import throw_unknown_save_error, _name_value_error
 
-logger = setup_logger("taxumap", verbose=False, debug=False)
+logger_taxumap = setup_logger("taxumap", verbose=False, debug=False)
 
 
 class Taxumap(TaxumapMixin):
@@ -73,7 +73,9 @@ class Taxumap(TaxumapMixin):
             if rel_abundances is None and fpx is None:
                 raise ValueError
             elif isinstance(rel_abundances, pd.DataFrame):
-                logger.info("Recognized `rel_abundances` parameter as Pandas DataFrame")
+                logger_taxumap.info(
+                    "Recognized `rel_abundances` parameter as Pandas DataFrame"
+                )
                 self.fpx = None
                 self.rel_abundances = rel_abundances
 
@@ -84,17 +86,17 @@ class Taxumap(TaxumapMixin):
                     # if it can't set the index to 'index_column', maybe it's already set
                     # let's check to see if that is not the case
                     if self.rel_abundances.index.name != "index_column":
-                        logger.exception(
+                        logger_taxumap.exception(
                             "Your rel_abundances df needs to contain 'index_column' containing sample identifiers of each row containing relative OTU/ASV abundances"
                         )
                         sys.exit(2)
                     else:
-                        logger.info(
+                        logger_taxumap.info(
                             "Your rel_abundances dataframe already had 'index_column' as the index."
                         )
 
                 else:
-                    logger.info(
+                    logger_taxumap.info(
                         "index_column has been set as index for self.rel_abundances"
                     )
 
@@ -118,7 +120,9 @@ class Taxumap(TaxumapMixin):
             if taxonomy is None and fpt is None:
                 raise ValueError
             elif isinstance(taxonomy, pd.DataFrame):
-                logger.info("Recognized `taxonomy` parameter as Pandas DataFrame")
+                logger_taxumap.info(
+                    "Recognized `taxonomy` parameter as Pandas DataFrame"
+                )
                 self.fpt = None
                 self.taxonomy = taxonomy
                 self.taxonomy.columns = map(str.capitalize, self.taxonomy.columns)
@@ -155,7 +159,7 @@ class Taxumap(TaxumapMixin):
             neigh = kwargs["neigh"]
         else:
             # TODO: Add in documentation guideance on neigh
-            logger.warning(
+            logger_taxumap.warning(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
             neigh = 120 if len(self.rel_abundances) > 120 else len(self.rel_abundances)
@@ -163,7 +167,7 @@ class Taxumap(TaxumapMixin):
         if "min_dist" in kwargs:
             min_dist = kwargs["min_dist"]
         else:
-            logger.info("Setting min_dist to 0.05/sum(weights)")
+            logger_taxumap.info("Setting min_dist to 0.05/sum(weights)")
             min_dist = 0.05 / np.sum(self.weights)
 
         if "epochs" in kwargs:
@@ -174,7 +178,7 @@ class Taxumap(TaxumapMixin):
                 if neigh < 120
                 else (1000 if len(self.rel_abundances) < 5000 else 1000)
             )
-            logger.info("Setting epochs to %d" % epochs)
+            logger_taxumap.info("Setting epochs to %d" % epochs)
 
         distance_metric = "braycurtis"
 
