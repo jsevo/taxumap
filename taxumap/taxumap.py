@@ -380,14 +380,17 @@ class Taxumap:
 
         return self
 
-    def scatter(self, figsize=(16, 10), save=False, outdir=None, **kwargs):
+    def scatter(
+        self, figsize=(16, 10), save=False, outdir=None, ax=None, fig=None, **kwargs
+    ):
 
         if not self._is_transformed:
             raise AttributeError(
                 "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
             )
 
-        fig, ax = plt.subplots(figsize=figsize)
+        if fig or ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
 
         ax.scatter(
             self.df_embedding[self.df_embedding.columns[0]],
