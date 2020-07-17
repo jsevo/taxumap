@@ -325,26 +325,30 @@ class Taxumap:
         """
 
         # Maybe better way of implementing this
-        if "neigh" in kwargs:
-            neigh = kwargs["neigh"]
-        else:
-            # TODO: Add in documentation guideance on neigh
+
+        if "neigh" not in kwargs:
             logger.warning(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
-            neigh = 120 if len(self.rel_abundances)>120 else len(self.rel_abundances)-1
-
-        if "min_dist" in kwargs:
-            min_dist = kwargs["min_dist"]
+            neigh = 120 if len(self.rel_abundances) > 120 else len(self.rel_abundances)-1
         else:
+            neigh = kwargs["neigh"]
+
+        if "min_dist" not in kwargs:
             logger.info("Setting min_dist to 0.05/sum(weights)")
-            min_dist = .05/np.sum(self.weights)
-
-        if "epochs" in kwargs:
-            epochs = kwargs["epochs"]
+            min_dist = 0.05 / np.sum(self.weights)
         else:
-            epochs = 5000 if neigh<120 else (1000 if len(self.rel_abundances)<5000 else 1000)  
-            logger.info("Setting epochs to %d"%epochs)
+            min_dist = kwargs["min_dist"]
+
+        if "epochs" not in kwargs:
+            epochs = (
+                5000
+                if neigh < 120
+                else (1000 if len(self.rel_abundances) < 5000 else 1000)
+            )
+            logger.info("Setting epochs to %d" % epochs)
+        else:
+            epochs = kwargs["epochs"]
 
         distance_metric = "braycurtis"
 
@@ -386,14 +390,17 @@ class Taxumap:
 
         return self
 
-    def scatter(self, figsize=(16, 10), save=False, outdir=None, **kwargs):
+    def scatter(
+        self, figsize=(16, 10), save=False, outdir=None, ax=None, fig=None, **kwargs
+    ):
 
         if not self._is_transformed:
             raise AttributeError(
                 "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
             )
 
-        fig, ax = plt.subplots(figsize=figsize)
+        if fig or ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
 
         ax.scatter(
             self.df_embedding[self.df_embedding.columns[0]],
