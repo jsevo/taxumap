@@ -332,7 +332,7 @@ class Taxumap:
             logger.warning(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
-            neigh = 120 if len(self.rel_abundances)>120 else len(self.rel_abundances)
+            neigh = 120 if len(self.rel_abundances)>120 else len(self.rel_abundances)-1
 
         if "min_dist" in kwargs:
             min_dist = kwargs["min_dist"]
@@ -358,7 +358,7 @@ class Taxumap:
         )
 
         self.taxumap = UMAP(
-            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed"
+            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed",transform_seed=1
         ).fit(Xagg)
 
         self.embedding = self.taxumap.transform(Xagg)
