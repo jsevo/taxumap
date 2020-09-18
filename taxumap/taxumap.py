@@ -399,7 +399,7 @@ class Taxumap:
                 "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
             )
 
-        if fig or ax is None:
+        if ( fig is None ) or ( ax is None ):
             fig, ax = plt.subplots(figsize=figsize)
 
         ax.scatter(
