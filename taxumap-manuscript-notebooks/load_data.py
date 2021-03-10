@@ -3,28 +3,6 @@
 __author__ = "Jonas Schluter"
 __copyright__ = "Copyright 2020, MIT License"
 
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle, Circle
-from matplotlib.collections import PatchCollection
-import matplotlib.cm as cm
-import numpy as np
-import seaborn as sns
-from hctmicrobiomemskcc.dataloading.dataloading import (
-    load_microbiome_tables,
-    load_metadata,
-    load_all_data,
-)
-from hctmicrobiomemskcc.dataloading.hct_datawrangling import calculate_hct_day
-from hctmicrobiomemskcc.tools.microbiotatools import (
-    calculate_relative_counts,
-    get_composition_at_taxlevel,
-)
-from hctmicrobiomemskcc.tools.tools import isfloat
-import matplotlib
-import pandas as pd
-
-matplotlib.rcParams["pdf.fonttype"] = 42
-matplotlib.rcParams["ps.fonttype"] = 42
 
 ### prepare tables
 alldata = load_all_data()
@@ -126,9 +104,6 @@ scatter_meta_data.loc[post_engraftment.values, "Phase"] = 3
 
 
 ########################################
-
-from skbio.tree import TreeNode
-from skbio.diversity import beta_diversity
 
 _tax = taxonomy.loc[XASV.columns[0:100]]
 _tax.index.name = "ASV"

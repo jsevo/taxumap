@@ -39,6 +39,7 @@ class Taxumap:
         fpt=None,
         fpx=None,
         name=None,
+        random_state=42
     ):
 
         """Constructor method for the Taxumap object
@@ -362,7 +363,7 @@ class Taxumap:
         )
 
         self.taxumap = UMAP(
-            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed",transform_seed=1
+            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed",transform_seed=1, random_state=random_state
         ).fit(Xagg)
 
         self.embedding = self.taxumap.transform(Xagg)
