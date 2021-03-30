@@ -88,15 +88,15 @@ if __name__ == "__main__":
 
     # taxonomy
     if args.taxonomy is not None:
-        inputs["fpt"] = args.taxonomy
+        inputs["taxonomy"] = args.taxonomy
     else:
-        inputs["fpt"] = "./data/taxonomy.csv"
+        inputs["taxonomy"] = "./data/taxonomy.csv"
 
     # rel_abundances
     if args.microbiota_data is not None:
-        inputs["fpx"] = args.microbiota_data
+        inputs["microbiota_data"] = args.microbiota_data
     else:
-        inputs["fpx"] = "./data/microbiota_table.csv"
+        inputs["microbiota_data"] = "./data/microbiota_table.csv"
 
     if args.outdir is not None:
         inputs["outdir"] = args.outdir

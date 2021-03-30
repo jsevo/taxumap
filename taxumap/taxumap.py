@@ -37,7 +37,7 @@ class Taxumap:
         self,
         agg_levels=["Phylum", "Family"],
         weights=None,
-        rel_abundances=None,
+        microbiota_data=None,
         taxonomy=None,
         name=None,
         random_state=42,
@@ -60,7 +60,7 @@ class Taxumap:
 
 
         weights, rel_abundances, taxonomy = validate_inputs(
-            weights, rel_abundances, taxonomy, agg_levels, logger_taxumap
+            weights, microbiota_data, taxonomy, agg_levels, logger_taxumap
         )
         self.weights = weights
         self.rel_abundances = rel_abundances

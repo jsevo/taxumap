@@ -30,14 +30,14 @@ def test_reproducibility_of_embedding(n=500, d=15):
     tax = tax.astype(str)
 
     # tumap 1, transform twice
-    tumap = Taxumap(rel_abundances=rX, taxonomy=tax)
+    tumap = Taxumap(microbiota_data=rX, taxonomy=tax)
     tumap.transform_self()
     em1 = tumap.embedding.copy()
     tumap.transform_self()
     em2 = tumap.embedding.copy()
 
     # tumap 2, transform twice
-    tumap2 = Taxumap(rel_abundances=rX, taxonomy=tax)
+    tumap2 = Taxumap(microbiota_data=rX, taxonomy=tax)
     tumap2.transform_self()
     em3 = tumap2.embedding.copy()
 
