@@ -16,11 +16,11 @@ import pandas as pd
 import scipy.spatial.distance as ssd
 import seaborn as sns
 from matplotlib import pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
 from umap import UMAP
 
 import taxumap.dataloading as dataloading
 import taxumap.tools as tools
+from taxumap.input_validation import validate_inputs
 import taxumap.visualizations as viz
 from taxumap.custom_logging import setup_logger
 
@@ -36,8 +36,8 @@ class Taxumap:
         weights=None,
         rel_abundances=None,
         taxonomy=None,
-        fpt=None,
-        fpx=None,
+#        fpt=None,
+#        fpx=None,
         name=None,
         random_state=42
     ):
@@ -58,82 +58,10 @@ class Taxumap:
 
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
-        # I am pretty sure that my use of If...Else below violates the EAFP principles - should use Try..Except instead
-
-        if weights is None:
-            self.weights = [1] * len(agg_levels)
-        else:
-            if len(weights) != len(agg_levels):
-                raise ValueError(
-                    "The length of the weights must match that of agg_levels"
-                )
-            else:
-                self.weights = weights
-
-        # Set rel_abundances df
-        try:
-            if rel_abundances is None and fpx is None:
-                raise ValueError
-            elif isinstance(rel_abundances, pd.DataFrame):
-                logger.info("Recognized `rel_abundances` parameter as Pandas DataFrame")
-                self.fpx = None
-                self.rel_abundances = rel_abundances
-
-                # Validate the rel_abundances dataset
-                try:
-                    self.rel_abundances.set_index("index_column", inplace=True)
-                except KeyError:
-                    # if it can't set the index to 'index_column', maybe it's already set
-                    # let's check to see if that is not the case
-                    if self.rel_abundances.index.name != "index_column":
-                        logger.exception(
-                            "Your rel_abundances df needs to contain 'index_column' containing sample identifiers of each row containing relative OTU/ASV abundances"
-                        )
-                        sys.exit(2)
-                    else:
-                        logger.info(
-                            "Your rel_abundances dataframe already had 'index_column' as the index."
-                        )
-
-                else:
-                    logger.info(
-                        "index_column has been set as index for self.rel_abundances"
-                    )
-
-                # lastly, quickly check if the data is compositional.
-                dataloading.check_if_compositional(
-                    self.rel_abundances,
-                    name="locally-supplied microbiota (rel_abundances)",
-                )
-
-            elif isinstance(fpx, str):
-                self.fpx = fpx
-                self.rel_abundances = dataloading.parse_microbiome_data(fpx)
-            else:
-                #TODO currently only file paths or pd.DataFrame accepted. Passing a numpy array raises a NameError without explanation. Adding explanation now, but should be possible to pass a np.array
-                raise NameError
-        except (ValueError, NameError) as e:
-            _name_value_error(e, "fpx", "rel_abundances")
-            raise
-
-        # Set taxonomy df
-        try:
-            if taxonomy is None and fpt is None:
-                raise ValueError
-            elif isinstance(taxonomy, pd.DataFrame):
-                logger.info("Recognized `taxonomy` parameter as Pandas DataFrame")
-                self.fpt = None
-                self.taxonomy = taxonomy
-                self.taxonomy.columns = map(str.capitalize, self.taxonomy.columns)
-                dataloading.check_tax_is_consistent(self.taxonomy)
-            elif isinstance(fpx, str):
-                self.fpt = fpt
-                self.taxonomy = dataloading.parse_taxonomy_data(fpt)
-            else:
-                raise NameError
-        except (ValueError, NameError) as e:
-            _name_value_error(e, "fpt", "taxonomy")
-            raise
+        weights, rel_abundances, taxonomy = validate_inputs(weights, rel_abundances, taxonomy, agg_levels, logger)
+        self.weights = weights 
+        self.rel_abundances = rel_abundances
+        self.taxonomy = taxonomy
 
         # Set name attribute
         if isinstance(name, str):

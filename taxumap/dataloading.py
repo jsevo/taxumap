@@ -119,7 +119,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"], idx_dtype=str):
             tax.columns = map(str.capitalize, tax.columns)
 
         except ValueError:
-            logger.exception("ASV/OTU not found in your columns")
+            logger.exception("Neither ASV nor OTU not found in your columns. This is required as base level of Taxonomy. A fix can be to rename your lowest level to ASV.")
             sys.exit(2)
 
         else:
@@ -149,9 +149,9 @@ def check_tax_is_consistent(df):
         )
 
     # should we just read_csv() and only allow certain datatypes (i.e. str, obj?)
-    if any(df.dtypes == (int, float)):
+    if any(df.dtypes != (str)):
         logger.warning(
-            "Your taxonomy table contains columns may contain numerical data. Please consult documentation because you may have incorrectly formatted your dataframe."
+            "Your taxonomy table contains non string type columns. Please consult documentation because you may have incorrectly formatted your dataframe."
         )
 
 
