@@ -88,7 +88,7 @@ class TestFillTaxonomyTable(unittest.TestCase):
         self.assertEqual(x7, "Kingdom_unknown_Kingdom_of_unknown_Order____ASV5")
 
     def test_reproducibility(self):
-        test_reproducibility_of_embedding(n=1500, d=70)
+        self.assertTrue( test_reproducibility_of_embedding(n=150, d=7) )
 
 
 if __name__ == "__main__":

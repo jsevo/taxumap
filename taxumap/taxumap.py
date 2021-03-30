@@ -28,7 +28,7 @@ logger = setup_logger("taxumap", verbose=False, debug=False)
 
 
 class Taxumap:
-    """Taxumap object for running taxUMAP algorithm"""
+    """Taxumap object for running TaxUMAP algorithm"""
 
     def __init__(
         self,
@@ -36,10 +36,8 @@ class Taxumap:
         weights=None,
         rel_abundances=None,
         taxonomy=None,
-#        fpt=None,
-#        fpx=None,
         name=None,
-        random_state=42
+        random_state=42,
     ):
 
         """Constructor method for the Taxumap object
@@ -58,8 +56,10 @@ class Taxumap:
 
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
-        weights, rel_abundances, taxonomy = validate_inputs(weights, rel_abundances, taxonomy, agg_levels, logger)
-        self.weights = weights 
+        weights, rel_abundances, taxonomy = validate_inputs(
+            weights, rel_abundances, taxonomy, agg_levels, logger
+        )
+        self.weights = weights
         self.rel_abundances = rel_abundances
         self.taxonomy = taxonomy
 
@@ -262,7 +262,9 @@ class Taxumap:
             logger.warning(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
-            neigh = 120 if len(self.rel_abundances) > 120 else len(self.rel_abundances)-1
+            neigh = (
+                120 if len(self.rel_abundances) > 120 else len(self.rel_abundances) - 1
+            )
         else:
             neigh = kwargs["neigh"]
 
@@ -296,13 +298,18 @@ class Taxumap:
         rs = np.random.RandomState(seed=self.random_state)
 
         if self._is_transformed:
-            print("TaxUMAP has already been fit. Re-running could yield a different embedding due to random state changes betweeen first and second run. Re-starting RandomState.")
+            print(
+                "TaxUMAP has already been fit. Re-running could yield a different embedding due to random state changes betweeen first and second run. Re-starting RandomState."
+            )
             rs = np.random.RandomState(seed=self.random_state)
 
-
-
         self.taxumap = UMAP(
-            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed",transform_seed=1, random_state=rs
+            n_neighbors=neigh,
+            min_dist=min_dist,
+            n_epochs=epochs,
+            metric="precomputed",
+            transform_seed=1,
+            random_state=rs,
         ).fit(Xagg)
 
         self.embedding = self.taxumap.transform(Xagg)
@@ -333,19 +340,20 @@ class Taxumap:
     def scatter(
         self, figsize=(16, 10), save=False, outdir=None, ax=None, fig=None, **kwargs
     ):
+        # TODO I would like this removed. There is a visualizations module which has already got appropriate functions. should not be a method of this class.
 
         if not self._is_transformed:
             raise AttributeError(
                 "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
             )
 
-        if ( fig is None ) or ( ax is None ):
+        if (fig is None) or (ax is None):
             fig, ax = plt.subplots(figsize=figsize)
 
         ax.scatter(
             self.df_embedding[self.df_embedding.columns[0]],
             self.df_embedding[self.df_embedding.columns[1]],
-            **kwargs
+            **kwargs,
         )
         ax.set_xlabel(self.taxumap1)
         ax.set_ylabel(self.taxumap2)
@@ -360,24 +368,7 @@ class Taxumap:
         return fig, ax
 
     def __repr__(self):
-
-        if self._is_df_loaded:
-            return "Taxumap(agg_levels = {}, weights = {}, rel_abundances = '{}', taxonomy = '{}')".format(
-                self.agg_levels,
-                self.weights,
-                "loaded from local scope",
-                "loaded from local scope",
-            )
-
-        elif self._is_fp_loaded:
-            return "Taxumap(agg_levels = {}, weights = {}, fpx = '{}', fpt = '{}')".format(
-                self.agg_levels, self.weights, self.fpx, self.fpt
-            )
-
-        else:
-            return "Taxumap(agg_levels = {}, weights = {}, fpx = '{}', fpt = '{}')".format(
-                self.agg_levels, self.weights, self.fpx, self.fpt
-            )
+        return f"Taxumap(agg_levels = {self.agg_levels}, weights = {self.weights})"
 
     def __str__(self):
 
@@ -385,32 +376,9 @@ class Taxumap:
         # this is a part of the package where I build in the ability to
         # create from file or create from pandas df.
 
-        messages = [
-            "Taxumap with agg_levels = {} and weights = {}.".format(
-                self.agg_levels, self.weights
-            )
-        ]
-
-        if self._is_df_loaded:
-            messages.append(
-                "The `rel_abundances` and `taxonomy` dataframes were passed in from local variables."
-            )
-            return "\n \n".join(messages)
-
-        elif self._is_fp_loaded:
-            messages.append(
-                "The rel_abundances and taxonomy dataframes were generated from files located at\n'{}'\nand\n'{}',\nrespectively".format(
-                    self.fpx, self.fpt
-                )
-            )
-            return "\n \n".join(messages)
-
-        else:
-            return repr(self)
-
-
-def _test_variables(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
-    return rel_abundances, taxonomy, agg_levels, distance_metric, weights
+        return (
+            f"Taxumap with agg_levels = {self.agg_levels} and weights = {self.weights}."
+        )
 
 
 def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
@@ -492,11 +460,3 @@ def throw_unknown_save_error(e):
         "\nUnknown error has occured. Cannot save embedding as instructed."
     )
     sys.exit(2)
-
-
-def _name_value_error(e, fp_param, df_param):
-    logger.exception(
-        "Please provide the constructor with one of the following: a filepath to your {} file via parameter `{}`, or with an initialized variable for your {} dataframe via the parameter `{}`".format(
-            df_param, fp_param, df_param, df_param
-        )
-    )
