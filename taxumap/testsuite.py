@@ -8,7 +8,7 @@ import unittest
 import pandas as pd
 import numpy as np
 from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
-from .taxumap import Taxumap
+from taxumap.taxumap_base import Taxumap
 
 
 def test_reproducibility_of_embedding(n=500, d=15):
@@ -45,7 +45,7 @@ def test_reproducibility_of_embedding(n=500, d=15):
     em4 = tumap2.embedding.copy()
 
     # all embeddings must be close
-    return np.allclose(em1, em2, em3, em4)
+    return np.all([np.allclose(em1, em2), np.allclose(em3, em4), np.allclose(em1, em4)])
 
 
 class TestFillTaxonomyTable(unittest.TestCase):
@@ -88,7 +88,7 @@ class TestFillTaxonomyTable(unittest.TestCase):
         self.assertEqual(x7, "Kingdom_unknown_Kingdom_of_unknown_Order____ASV5")
 
     def test_reproducibility(self):
-        self.assertTrue( test_reproducibility_of_embedding(n=150, d=7) )
+        self.assertTrue(test_reproducibility_of_embedding(n=150, d=7))
 
 
 if __name__ == "__main__":
