@@ -19,7 +19,7 @@ from matplotlib import pyplot as plt
 from umap import UMAP
 
 import taxumap.dataloading as dataloading
-import taxumap.tools as tools
+from taxumap.tools import *
 from taxumap.input_validation import validate_inputs
 import taxumap.visualizations as viz
 from taxumap.custom_logging import setup_logger
@@ -55,12 +55,12 @@ class Taxumap:
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
         """
         self.random_state = random_state
-
+        self._is_transformed =False
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
 
         weights, rel_abundances, taxonomy = validate_inputs(
-            weights, rel_abundances, taxonomy, agg_levels, logger
+            weights, rel_abundances, taxonomy, agg_levels, logger_taxumap
         )
         self.weights = weights
         self.rel_abundances = rel_abundances
@@ -85,35 +85,37 @@ class Taxumap:
         """
 
         # Maybe better way of implementing this
-        if "neigh" in kwargs:
-            neigh = kwargs["neigh"]
-        else:
-            # TODO: Add in documentation guideance on neigh
+
+        if "neigh" not in kwargs:
             logger_taxumap.warning(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
-            neigh = 120 if len(self.rel_abundances) > 120 else len(self.rel_abundances)
-
-        if "min_dist" in kwargs:
-            min_dist = kwargs["min_dist"]
+            neigh = (
+                120 if len(self.rel_abundances) > 120 else len(self.rel_abundances) - 1
+            )
         else:
+            neigh = kwargs["neigh"]
+
+        if "min_dist" not in kwargs:
             logger_taxumap.info("Setting min_dist to 0.05/sum(weights)")
             min_dist = 0.05 / np.sum(self.weights)
-
-        if "epochs" in kwargs:
-            epochs = kwargs["epochs"]
         else:
+            min_dist = kwargs["min_dist"]
+
+        if "epochs" not in kwargs:
             epochs = (
                 5000
                 if neigh < 120
                 else (1000 if len(self.rel_abundances) < 5000 else 1000)
             )
             logger_taxumap.info("Setting epochs to %d" % epochs)
+        else:
+            epochs = kwargs["epochs"]
 
         distance_metric = "braycurtis"
 
         # Shouldn't need `try...except` because any Taxumap object should have proper attributes
-        Xagg = tools.tax_agg(
+        Xagg = tax_agg(
             self.rel_abundances,
             self.taxonomy,
             self.agg_levels,
@@ -121,13 +123,25 @@ class Taxumap:
             self.weights,
         )
 
+        rs = np.random.RandomState(seed=self.random_state)
+
+        if self._is_transformed:
+            print(
+                "TaxUMAP has already been fit. Re-running could yield a different embedding due to random state changes betweeen first and second run. Re-starting RandomState."
+            )
+            rs = np.random.RandomState(seed=self.random_state)
+
         self.taxumap = UMAP(
-            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed"
+            n_neighbors=neigh,
+            min_dist=min_dist,
+            n_epochs=epochs,
+            metric="precomputed",
+#            transform_seed=1,
+            random_state=rs,
         ).fit(Xagg)
+        self._is_transformed = True
 
         self.embedding = self.taxumap.transform(Xagg)
-        # self._is_transformed = True
-
         self.index = Xagg.index
 
         if debug:
@@ -196,9 +210,9 @@ class Taxumap:
             with open(fp, "rb") as f:
                 data = pickle.load(f)
         except Exception:
-            logger.exception("Something went wrong loading from pickle")
+            logger_taxumap.exception("Something went wrong loading from pickle")
         else:
-            logger.info("Successfully located pickle file")
+            logger_taxumap.info("Successfully located pickle file")
 
         return data
 
@@ -214,92 +228,12 @@ class Taxumap:
 
         return self
 
-    def transform_self(
-        self, scale=False, debug=False, save=False, outdir=None, **kwargs
-    ):
-        """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
-
-        Args:
-            debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
-            save (bool, optional): If True, will attempt to save the resulting embedded as a csv file. Defaults to False.
-            outdir (str, optional): Path to where files should be saved, if save=True. Defaults to None.
-            pickle (bool, optional): If True, will save self object as a pickle. Defaults to False.
-        """
-
-        # Maybe better way of implementing this
-
-        if "neigh" not in kwargs:
-            logger.warning(
-                "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
-            )
-            neigh = (
-                120 if len(self.rel_abundances) > 120 else len(self.rel_abundances) - 1
-            )
-        else:
-            neigh = kwargs["neigh"]
-
-        if "min_dist" not in kwargs:
-            logger.info("Setting min_dist to 0.05/sum(weights)")
-            min_dist = 0.05 / np.sum(self.weights)
-        else:
-            min_dist = kwargs["min_dist"]
-
-        if "epochs" not in kwargs:
-            epochs = (
-                5000
-                if neigh < 120
-                else (1000 if len(self.rel_abundances) < 5000 else 1000)
-            )
-            logger.info("Setting epochs to %d" % epochs)
-        else:
-            epochs = kwargs["epochs"]
-
-        distance_metric = "braycurtis"
-
-        # Shouldn't need `try...except` because any Taxumap object should have proper attributes
-        Xagg = tax_agg(
-            self.rel_abundances,
-            self.taxonomy,
-            self.agg_levels,
-            distance_metric,
-            self.weights,
-        )
-
-        rs = np.random.RandomState(seed=self.random_state)
-
-        if self._is_transformed:
-            print(
-                "TaxUMAP has already been fit. Re-running could yield a different embedding due to random state changes betweeen first and second run. Re-starting RandomState."
-            )
-            rs = np.random.RandomState(seed=self.random_state)
-
-        self.taxumap = UMAP(
-            n_neighbors=neigh,
-            min_dist=min_dist,
-            n_epochs=epochs,
-            metric="precomputed",
-            transform_seed=1,
-            random_state=rs,
-        ).fit(Xagg)
-
-        self.embedding = self.taxumap.transform(Xagg)
-        # self._is_transformed = True
-        self.index = Xagg.index
-
-        if debug:
-            self.Xagg = Xagg
-
-        if save:
-            self.save_embedding(outdir=outdir)
-
-        return self
-
     def save_embedding(self, outdir=None):
 
         try:
             _save(self.df_embedding.to_csv, outdir, self._embedded_csv_name)
         except AttributeError as e:
-            logger.warning(
+            logger_taxumap.warning(
                 "\nEmbedding not currently populated. Please run taxumap.Taxumap.transform_self(save=True).\n"
             )
         except Exception as e:
@@ -341,46 +275,10 @@ class Taxumap:
         return f"Taxumap(agg_levels = {self.agg_levels}, weights = {self.weights})"
 
     def __str__(self):
-
-        # create an if...elif blcok for if fpt exists or not
-        # this is a part of the package where I build in the ability to
-        # create from file or create from pandas df.
-
         return (
             f"Taxumap with agg_levels = {self.agg_levels} and weights = {self.weights}."
         )
 
-
-def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
-    """Generates a distance matrix aggregated on each designated taxon
-
-    Args:
-        rel_abundances (Pandas df): Relative abundance df with row-wise compositional data, row: sample, columns: OTU/ASV label
-        taxonomy (Pandas df): Row: OTU/ASV label, columns: hierarchy of taxonomy for that ASV/OTU
-        agg_levels (list of str): Taxons to aggregate
-        distance_metric (str): String to pass to ssd.cdist()
-        weights (list of int): Weights of the non-ASV/OTU taxons
-
-    Returns:
-        pandas df: distance table, row and columns are sample ids
-    """
-
-    _X = rel_abundances.copy()
-    # remove columns that are always zero
-    _X = _X.loc[:, (_X != 0).any(axis=0)]
-    Xdist = ssd.cdist(_X, _X, distance_metric)
-    Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
-
-    for agg_level, weight in zip(agg_levels, weights):
-        logger.info("aggregating on %s" % agg_level)
-        Xagg = tools.aggregate_at_taxlevel(_X, taxonomy, agg_level)
-        Xagg = ssd.cdist(Xagg, Xagg, distance_metric)
-        Xagg = pd.DataFrame(Xagg, index=_X.index, columns=_X.index)
-        Xagg = Xagg * weight
-
-        Xdist = Xdist + Xagg
-
-    return Xdist
 
 
 def _save(fxn, outdir, filename, **kwargs):
@@ -402,7 +300,7 @@ def _save(fxn, outdir, filename, **kwargs):
         try:
             outdir = Path(outdir).resolve(strict=True)
         except (FileNotFoundError, TypeError) as e:
-            logger.warning(
+            logger_taxumap.warning(
                 '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
             )
 
@@ -410,9 +308,9 @@ def _save(fxn, outdir, filename, **kwargs):
         outdir = Path("./results").resolve()
         try:
             os.mkdir(outdir)
-            logger.info("Making ./results folder...")
+            logger_taxumap.info("Making ./results folder...")
         except FileExistsError:
-            logger.info("./results folder already exists")
+            logger_taxumap.info("./results folder already exists")
         except Exception as e:
             throw_unknown_save_error(e)
             sys.exit(2)
@@ -422,11 +320,11 @@ def _save(fxn, outdir, filename, **kwargs):
     except Exception as e:
         throw_unknown_save_error(e)
     else:
-        logger.info("Save successful")
+        logger_taxumap.info("Save successful")
 
 
 def throw_unknown_save_error(e):
-    logger.exception(
+    logger_taxumap.exception(
         "\nUnknown error has occured. Cannot save embedding as instructed."
     )
     sys.exit(2)
