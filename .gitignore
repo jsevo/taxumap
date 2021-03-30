@@ -111,3 +111,6 @@ ENV/
 *.pickle
 taxumap/todo.md
 *.json
+
+# manuscript notebooks are published separately
+taxumap-manuscript-notebooks/*

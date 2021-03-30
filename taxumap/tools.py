@@ -87,3 +87,6 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
     Xscaled = scaler.fit_transform(X[X_consider])
 
     return Xscaled
+
+
+

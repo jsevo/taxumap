@@ -20,6 +20,7 @@ from umap import UMAP
 
 import taxumap.dataloading as dataloading
 import taxumap.tools as tools
+from taxumap.input_validation import validate_inputs
 import taxumap.visualizations as viz
 from taxumap.custom_logging import setup_logger
 from taxumap._taxumap import TaxumapMixin, _save
@@ -28,8 +29,9 @@ from taxumap.errors import throw_unknown_save_error, _name_value_error
 logger_taxumap = setup_logger("taxumap", verbose=False, debug=False)
 
 
-class Taxumap(TaxumapMixin):
-    """Taxumap object for running taxUMAP algorithm"""
+
+class Taxumap:
+    """Taxumap object for running TaxUMAP algorithm"""
 
     def __init__(
         self,
@@ -37,9 +39,8 @@ class Taxumap(TaxumapMixin):
         weights=None,
         rel_abundances=None,
         taxonomy=None,
-        fpt=None,
-        fpx=None,
         name=None,
+        random_state=42,
     ):
 
         """Constructor method for the Taxumap object
@@ -53,88 +54,17 @@ class Taxumap(TaxumapMixin):
             fpx (str, optional): Filepath to the rel_abundances dataframe, if saved on disk. Defaults to None.
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
         """
+        self.random_state = random_state
 
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
-        # I am pretty sure that my use of If...Else below violates the EAFP principles - should use Try..Except instead
 
-        if weights is None:
-            self.weights = [1] * len(agg_levels)
-        else:
-            if len(weights) != len(agg_levels):
-                raise ValueError(
-                    "The length of the weights must match that of agg_levels"
-                )
-            else:
-                self.weights = weights
-
-        # Set rel_abundances df
-        try:
-            if rel_abundances is None and fpx is None:
-                raise ValueError
-            elif isinstance(rel_abundances, pd.DataFrame):
-                logger_taxumap.info(
-                    "Recognized `rel_abundances` parameter as Pandas DataFrame"
-                )
-                self.fpx = None
-                self.rel_abundances = rel_abundances
-
-                # Validate the rel_abundances dataset
-                try:
-                    self.rel_abundances.set_index("index_column")
-                except KeyError:
-                    # if it can't set the index to 'index_column', maybe it's already set
-                    # let's check to see if that is not the case
-                    if self.rel_abundances.index.name != "index_column":
-                        logger_taxumap.exception(
-                            "Your rel_abundances df needs to contain 'index_column' containing sample identifiers of each row containing relative OTU/ASV abundances"
-                        )
-                        sys.exit(2)
-                    else:
-                        logger_taxumap.info(
-                            "Your rel_abundances dataframe already had 'index_column' as the index."
-                        )
-
-                else:
-                    logger_taxumap.info(
-                        "index_column has been set as index for self.rel_abundances"
-                    )
-
-                # lastly, quickly check if the data is compositional.
-                dataloading.check_if_compositional(
-                    self.rel_abundances,
-                    name="locally-supplied microbiota (rel_abundances)",
-                )
-
-            elif isinstance(fpx, str):
-                self.fpx = fpx
-                self.rel_abundances = dataloading.parse_microbiome_data(fpx)
-            else:
-                raise NameError
-        except (ValueError, NameError) as e:
-            _name_value_error(e, "fpx", "rel_abundances")
-            raise
-
-        # Set taxonomy df
-        try:
-            if taxonomy is None and fpt is None:
-                raise ValueError
-            elif isinstance(taxonomy, pd.DataFrame):
-                logger_taxumap.info(
-                    "Recognized `taxonomy` parameter as Pandas DataFrame"
-                )
-                self.fpt = None
-                self.taxonomy = taxonomy
-                self.taxonomy.columns = map(str.capitalize, self.taxonomy.columns)
-                dataloading.check_tax_is_consistent(self.taxonomy)
-            elif isinstance(fpx, str):
-                self.fpt = fpt
-                self.taxonomy = dataloading.parse_taxonomy_data(fpt)
-            else:
-                raise NameError
-        except (ValueError, NameError) as e:
-            _name_value_error(e, "fpt", "taxonomy")
-            raise
+        weights, rel_abundances, taxonomy = validate_inputs(
+            weights, rel_abundances, taxonomy, agg_levels, logger
+        )
+        self.weights = weights
+        self.rel_abundances = rel_abundances
+        self.taxonomy = taxonomy
 
         # Set name attribute
         if isinstance(name, str):
@@ -258,22 +188,142 @@ class Taxumap(TaxumapMixin):
 
         return df_final
 
+    @classmethod
+    def from_pickle(cls, fp):
+        import pickle
+
+        try:
+            with open(fp, "rb") as f:
+                data = pickle.load(f)
+        except Exception:
+            logger.exception("Something went wrong loading from pickle")
+        else:
+            logger.info("Successfully located pickle file")
+
+        return data
+
+    def to_pickle(self, outdir=".", name=None):
+
+        import pickle
+
+        if name is None:
+            name = self._embedded_pickle_name
+
+        with open(os.path.join(outdir, name), "wb") as f:
+            pickle.dump(self, f)
+
+        return self
+
+    def transform_self(
+        self, scale=False, debug=False, save=False, outdir=None, **kwargs
+    ):
+        """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
+
+        Args:
+            debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
+            save (bool, optional): If True, will attempt to save the resulting embedded as a csv file. Defaults to False.
+            outdir (str, optional): Path to where files should be saved, if save=True. Defaults to None.
+            pickle (bool, optional): If True, will save self object as a pickle. Defaults to False.
+        """
+
+        # Maybe better way of implementing this
+
+        if "neigh" not in kwargs:
+            logger.warning(
+                "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
+            )
+            neigh = (
+                120 if len(self.rel_abundances) > 120 else len(self.rel_abundances) - 1
+            )
+        else:
+            neigh = kwargs["neigh"]
+
+        if "min_dist" not in kwargs:
+            logger.info("Setting min_dist to 0.05/sum(weights)")
+            min_dist = 0.05 / np.sum(self.weights)
+        else:
+            min_dist = kwargs["min_dist"]
+
+        if "epochs" not in kwargs:
+            epochs = (
+                5000
+                if neigh < 120
+                else (1000 if len(self.rel_abundances) < 5000 else 1000)
+            )
+            logger.info("Setting epochs to %d" % epochs)
+        else:
+            epochs = kwargs["epochs"]
+
+        distance_metric = "braycurtis"
+
+        # Shouldn't need `try...except` because any Taxumap object should have proper attributes
+        Xagg = tax_agg(
+            self.rel_abundances,
+            self.taxonomy,
+            self.agg_levels,
+            distance_metric,
+            self.weights,
+        )
+
+        rs = np.random.RandomState(seed=self.random_state)
+
+        if self._is_transformed:
+            print(
+                "TaxUMAP has already been fit. Re-running could yield a different embedding due to random state changes betweeen first and second run. Re-starting RandomState."
+            )
+            rs = np.random.RandomState(seed=self.random_state)
+
+        self.taxumap = UMAP(
+            n_neighbors=neigh,
+            min_dist=min_dist,
+            n_epochs=epochs,
+            metric="precomputed",
+            transform_seed=1,
+            random_state=rs,
+        ).fit(Xagg)
+
+        self.embedding = self.taxumap.transform(Xagg)
+        # self._is_transformed = True
+        self.index = Xagg.index
+
+        if debug:
+            self.Xagg = Xagg
+
+        if save:
+            self.save_embedding(outdir=outdir)
+
+        return self
+
+    def save_embedding(self, outdir=None):
+
+        try:
+            _save(self.df_embedding.to_csv, outdir, self._embedded_csv_name)
+        except AttributeError as e:
+            logger.warning(
+                "\nEmbedding not currently populated. Please run taxumap.Taxumap.transform_self(save=True).\n"
+            )
+        except Exception as e:
+            throw_unknown_save_error(e)
+
+        return self
+
     def scatter(
         self, figsize=(16, 10), save=False, outdir=None, ax=None, fig=None, **kwargs
     ):
+        # TODO I would like this removed. There is a visualizations module which has already got appropriate functions. should not be a method of this class.
 
         if not self._is_transformed:
             raise AttributeError(
                 "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
             )
 
-        if fig or ax is None:
+        if (fig is None) or (ax is None):
             fig, ax = plt.subplots(figsize=figsize)
 
         ax.scatter(
             self.df_embedding[self.df_embedding.columns[0]],
             self.df_embedding[self.df_embedding.columns[1]],
-            **kwargs
+            **kwargs,
         )
         ax.set_xlabel(self.taxumap1)
         ax.set_ylabel(self.taxumap2)
@@ -288,24 +338,7 @@ class Taxumap(TaxumapMixin):
         return fig, ax
 
     def __repr__(self):
-
-        if self._is_df_loaded:
-            return "Taxumap(agg_levels = {}, weights = {}, rel_abundances = '{}', taxonomy = '{}')".format(
-                self.agg_levels,
-                self.weights,
-                "loaded from local scope",
-                "loaded from local scope",
-            )
-
-        elif self._is_fp_loaded:
-            return "Taxumap(agg_levels = {}, weights = {}, fpx = '{}', fpt = '{}')".format(
-                self.agg_levels, self.weights, self.fpx, self.fpt
-            )
-
-        else:
-            return "Taxumap(agg_levels = {}, weights = {}, fpx = '{}', fpt = '{}')".format(
-                self.agg_levels, self.weights, self.fpx, self.fpt
-            )
+        return f"Taxumap(agg_levels = {self.agg_levels}, weights = {self.weights})"
 
     def __str__(self):
 
@@ -313,25 +346,87 @@ class Taxumap(TaxumapMixin):
         # this is a part of the package where I build in the ability to
         # create from file or create from pandas df.
 
-        messages = [
-            "Taxumap with agg_levels = {} and weights = {}.".format(
-                self.agg_levels, self.weights
-            )
-        ]
+        return (
+            f"Taxumap with agg_levels = {self.agg_levels} and weights = {self.weights}."
+        )
 
-        if self._is_df_loaded:
-            messages.append(
-                "The `rel_abundances` and `taxonomy` dataframes were passed in from local variables."
-            )
-            return "\n \n".join(messages)
 
-        elif self._is_fp_loaded:
-            messages.append(
-                "The rel_abundances and taxonomy dataframes were generated from files located at\n'{}'\nand\n'{}',\nrespectively".format(
-                    self.fpx, self.fpt
-                )
-            )
-            return "\n \n".join(messages)
+def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
+    """Generates a distance matrix aggregated on each designated taxon
 
-        else:
-            return repr(self)
+    Args:
+        rel_abundances (Pandas df): Relative abundance df with row-wise compositional data, row: sample, columns: OTU/ASV label
+        taxonomy (Pandas df): Row: OTU/ASV label, columns: hierarchy of taxonomy for that ASV/OTU
+        agg_levels (list of str): Taxons to aggregate
+        distance_metric (str): String to pass to ssd.cdist()
+        weights (list of int): Weights of the non-ASV/OTU taxons
+
+    Returns:
+        pandas df: distance table, row and columns are sample ids
+    """
+
+    _X = rel_abundances.copy()
+    # remove columns that are always zero
+    _X = _X.loc[:, (_X != 0).any(axis=0)]
+    Xdist = ssd.cdist(_X, _X, distance_metric)
+    Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
+
+    for agg_level, weight in zip(agg_levels, weights):
+        logger.info("aggregating on %s" % agg_level)
+        Xagg = tools.aggregate_at_taxlevel(_X, taxonomy, agg_level)
+        Xagg = ssd.cdist(Xagg, Xagg, distance_metric)
+        Xagg = pd.DataFrame(Xagg, index=_X.index, columns=_X.index)
+        Xagg = Xagg * weight
+
+        Xdist = Xdist + Xagg
+
+    return Xdist
+
+
+def _save(fxn, outdir, filename, **kwargs):
+    """[summary]
+
+    Args:
+        fxn (function handle): f(Path-like object or str)
+        outdir ([type]): [description]
+        filename ([type]): [description]
+
+    Raises:
+        TypeError: [description]
+    """
+
+    if not callable(fxn):
+        raise TypeError("'fxn' passed is not callable")
+
+    if outdir is not None:
+        try:
+            outdir = Path(outdir).resolve(strict=True)
+        except (FileNotFoundError, TypeError) as e:
+            logger.warning(
+                '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
+            )
+
+    elif outdir is None:
+        outdir = Path("./results").resolve()
+        try:
+            os.mkdir(outdir)
+            logger.info("Making ./results folder...")
+        except FileExistsError:
+            logger.info("./results folder already exists")
+        except Exception as e:
+            throw_unknown_save_error(e)
+            sys.exit(2)
+
+    try:
+        fxn(os.path.join(outdir, filename), **kwargs)
+    except Exception as e:
+        throw_unknown_save_error(e)
+    else:
+        logger.info("Save successful")
+
+
+def throw_unknown_save_error(e):
+    logger.exception(
+        "\nUnknown error has occured. Cannot save embedding as instructed."
+    )
+    sys.exit(2)
