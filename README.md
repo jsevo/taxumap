@@ -1,16 +1,16 @@
-# taxumap
+# TaxUMAP
 
-**Visualize structure in large microbiome datasets. Implements Uniform Manifold Approximation and Projection (UMAP) with phylogenetic hierarchy.**
+Visualize structure in large microbiome datasets. Implements a microbiome research-focused extension of the Uniform Manifold Approximation and Projection (UMAP) by calculating microbiome sample by sample distances at different taxonomic aggregations of taxon abundances, and allowing for custom weighting of aggregates.
 
 ## Installation
 
-> *Notice:* taxumap will soon be available on both PyPi and Bioconda for installation via pip and conda. In the mean time, please use `pip install -e` as described below to install in developer mode.
+> *Notice:* TaxUMAP will be made available on both PyPi and Bioconda for installation via pip and conda. But until then, please use `pip install -e` as described below to install in developer mode.
 
 
 ## 
 ```
 git clone https://github.com/jsevo/phylo-umap.git
-pip install -e phylo-umap
+pip install -e .
 ```
 
 ## Usage
@@ -30,14 +30,17 @@ from taxumap.taxumap import Taxumap
 ##### Initialize Taxumap object #####
 
 # From file
-t = Taxumap(fpt='path/to/taxonomy.csv', 
-        fpx='path/to/microbiota_table.csv')
+t = Taxumap(taxonomy='path/to/taxonomy.csv', 
+            rel_abundances='path/to/microbiota_table.csv')
 
 # OR #
 
 # From local variable scope
+## df_taxonomy :: pd.DataFrame
+## rel_abundance :: pd.DataFrame
+
 t = Taxumap(taxonomy=df_taxonomy, 
-        rel_abundances=df_rel_abundances)
+            rel_abundances=df_rel_abundances)
 
 
 ##### Run the transformation and look at the results #####
