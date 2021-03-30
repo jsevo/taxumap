@@ -13,8 +13,8 @@ from pathlib import Path
 import matplotlib as mpl
 import numpy as np
 import pandas as pd
-import scipy.spatial.distance as ssd
 import seaborn as sns
+
 from matplotlib import pyplot as plt
 from umap import UMAP
 
@@ -23,8 +23,11 @@ import taxumap.tools as tools
 from taxumap.input_validation import validate_inputs
 import taxumap.visualizations as viz
 from taxumap.custom_logging import setup_logger
+from taxumap._taxumap import TaxumapMixin, _save
+from taxumap.errors import throw_unknown_save_error, _name_value_error
 
-logger = setup_logger("taxumap", verbose=False, debug=False)
+logger_taxumap = setup_logger("taxumap", verbose=False, debug=False)
+
 
 
 class Taxumap:
@@ -51,10 +54,10 @@ class Taxumap:
             fpx (str, optional): Filepath to the rel_abundances dataframe, if saved on disk. Defaults to None.
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
         """
-
         self.random_state = random_state
 
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
+
 
         weights, rel_abundances, taxonomy = validate_inputs(
             weights, rel_abundances, taxonomy, agg_levels, logger
@@ -69,104 +72,71 @@ class Taxumap:
         else:
             self.name = None
 
-    @property
-    def _exist_tax_meta_df(self):
-        return isinstance(self.taxonomy, pd.DataFrame)
+    def transform_self(
+        self, scale=False, debug=False, save=False, outdir=None, **kwargs
+    ):
+        """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
 
-    @property
-    def _exist_tax_df(self):
-        return isinstance(self.rel_abundances, pd.DataFrame)
+        Args:
+            debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
+            save (bool, optional): If True, will attempt to save the resulting embedded as a csv file. Defaults to False.
+            outdir (str, optional): Path to where files should be saved, if save=True. Defaults to None.
+            pickle (bool, optional): If True, will save self object as a pickle. Defaults to False.
+        """
 
-    @property
-    def _exist_tax_meta_fp(self):
-        """Returns true if the `fpt` parameter is a valid filepath"""
-        try:
-            logic = Path(self.fpt).is_file()
-        except TypeError:
-            return False
+        # Maybe better way of implementing this
+        if "neigh" in kwargs:
+            neigh = kwargs["neigh"]
         else:
-            return logic
-
-    @property
-    def _exist_tax_fp(self):
-        """Returns true if the `fpx` parameter is a valid filepath"""
-        try:
-            logic = Path(self.fpx).is_file()
-        except TypeError:
-            return False
-        else:
-            return logic
-
-    @property
-    def _is_df_loaded(self):
-        """Returns true if the object was initialized with df objects"""
-        return all((self._exist_tax_df, self._exist_tax_meta_df)) and not all(
-            (self._exist_tax_fp, self._exist_tax_meta_fp)
-        )
-
-    @property
-    def _is_fp_loaded(self):
-        """Returns true if the object was initialized with filepaths, or
-        if all such pre-requisites exist"""
-        return all(
-            (
-                self._exist_tax_df,
-                self._exist_tax_fp,
-                self._exist_tax_meta_fp,
-                self._exist_tax_meta_df,
+            # TODO: Add in documentation guideance on neigh
+            logger_taxumap.warning(
+                "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
+            neigh = 120 if len(self.rel_abundances) > 120 else len(self.rel_abundances)
+
+        if "min_dist" in kwargs:
+            min_dist = kwargs["min_dist"]
+        else:
+            logger_taxumap.info("Setting min_dist to 0.05/sum(weights)")
+            min_dist = 0.05 / np.sum(self.weights)
+
+        if "epochs" in kwargs:
+            epochs = kwargs["epochs"]
+        else:
+            epochs = (
+                5000
+                if neigh < 120
+                else (1000 if len(self.rel_abundances) < 5000 else 1000)
+            )
+            logger_taxumap.info("Setting epochs to %d" % epochs)
+
+        distance_metric = "braycurtis"
+
+        # Shouldn't need `try...except` because any Taxumap object should have proper attributes
+        Xagg = tools.tax_agg(
+            self.rel_abundances,
+            self.taxonomy,
+            self.agg_levels,
+            distance_metric,
+            self.weights,
         )
 
-    @property
-    def _embedded_csv_name(self):
-        """Filename for saving self.embedded to a csv file. Uses self.name if available."""
-        if isinstance(self.name, str):
-            return "_".join([self.name, "embedded.csv"])
-        else:
-            return "embedded.csv"
+        self.taxumap = UMAP(
+            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed"
+        ).fit(Xagg)
 
-    @property
-    def _embedded_pickle_name(self):
-        """Filename for saving self to a pickle. Uses self.name if available."""
-        if isinstance(self.name, str):
-            return "_".join([self.name, "taxumap_pickle.pickle"])
-        else:
-            return "taxumap_pickle.pickle"
+        self.embedding = self.taxumap.transform(Xagg)
+        # self._is_transformed = True
 
-    @property
-    def _plot_name(self, ext="png"):
-        """Filename for saving a plot to file. Uses self.name if available."""
-        if isinstance(self.name, str):
-            return "_".join([self.name, "plot." + ext])
-        else:
-            return "plot." + ext
+        self.index = Xagg.index
 
-    @property
-    def taxumap1(self):
-        """Get a label for first dimension of taxUMAP embedded space"""
-        first_letters = [agg_level[0] for agg_level in self.agg_levels]
-        initials = "".join(first_letters)
-        return "taxumap-{}-1".format(initials)
+        if debug:
+            self.Xagg = Xagg
 
-    @property
-    def taxumap2(self):
-        """Get a label for second dimension of taxUMAP embedded space"""
-        first_letters = [agg_level[0] for agg_level in self.agg_levels]
-        initials = "".join(first_letters)
-        return "taxumap-{}-2".format(initials)
+        if save:
+            self.save_embedding(outdir=outdir)
 
-    @property
-    def _is_transformed(self):
-        """Returns True if Taxumap.transform_self() has been previously run"""
-        try:
-            if isinstance(self.embedding, np.ndarray):
-                return True
-            else:
-                logger.warning(
-                    "taxumap.embedding is not an ndarray, something went wrong"
-                )
-        except AttributeError:
-            return False
+        return self
 
     @property
     def df_embedding(self):

@@ -16,3 +16,4 @@ class Colors:
     old_phylum_colors = pd.read_json(
         '{"Phylum":{"0":"Firmicutes","1":"Bacteroidetes","2":"Fusobacteria","3":"Proteobacteria","4":"Actinobacteria","5":"<not present>","6":"Spirochaetes","7":"Synergistetes","8":"Tenericutes","9":"Chloroflexi","10":"Verrucomicrobia","11":"Cyanobacteria","12":"Deinococcus-Thermus","13":"Chlamydiae","14":"Epsilonbacteraeota","15":"Patescibacteria","16":"Dependentiae","17":"Euryarchaeota","18":"Lentisphaerae","19":"Planctomycetes","20":"Acidobacteria","21":"Deferribacteres"},"HexColor":{"0":"#1635A4","1":"#16DDD3","2":"#D0D0D0","3":"#EE2C2C","4":"#D0D0D0","5":"#D0D0D0","6":"#D0D0D0","7":"#D0D0D0","8":"#D0D0D0","9":"#D0D0D0","10":"#CA0BE8","11":"#D0D0D0","12":"#D0D0D0","13":"#D0D0D0","14":"#D0D0D0","15":"#D0D0D0","16":"#D0D0D0","17":"#D0D0D0","18":"#D0D0D0","19":"#D0D0D0","20":"#D0D0D0","21":"#D0D0D0"}}'
     )
+

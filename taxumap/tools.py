@@ -1,14 +1,49 @@
 import os
-
-#!/usr/bin/env python
 import sys
 import warnings
+
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
+
+from taxumap.custom_logging import setup_logger
+
+logger_tools = setup_logger("tools", verbose=False, debug=False)
+
+
+def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
+    """Generates a distance matrix aggregated on each designated taxon
+
+    Args:
+        rel_abundances (Pandas df): Relative abundance df with row-wise compositional data, row: sample, columns: OTU/ASV label
+        taxonomy (Pandas df): Row: OTU/ASV label, columns: hierarchy of taxonomy for that ASV/OTU
+        agg_levels (list of str): Taxons to aggregate
+        distance_metric (str): String to pass to ssd.cdist()
+        weights (list of int): Weights of the non-ASV/OTU taxons
+
+    Returns:
+        pandas df: distance table, row and columns are sample ids
+    """
+
+    _X = rel_abundances.copy()
+    # remove columns that are always zero
+    _X = _X.loc[:, (_X != 0).any(axis=0)]
+    Xdist = ssd.cdist(_X, _X, distance_metric)
+    Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
+
+    for agg_level, weight in zip(agg_levels, weights):
+        logger_tools.info("aggregating on %s" % agg_level)
+        Xagg = aggregate_at_taxlevel(_X, taxonomy, agg_level)
+        Xagg = ssd.cdist(Xagg, Xagg, distance_metric)
+        Xagg = pd.DataFrame(Xagg, index=_X.index, columns=_X.index)
+        Xagg = Xagg * weight
+
+        Xdist = Xdist + Xagg
+
+    return Xdist
 
 
 def aggregate_at_taxlevel(X, tax, level):
@@ -37,7 +72,7 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
     ===============
     Xscaled: scaled ASV table
     """
-    X_sum = X.sum()
+    # X_sum = X.sum()
     X_stats = X.apply(["max"]).T
 
     if remove_rare_asv_level > 0:
