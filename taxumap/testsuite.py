@@ -10,6 +10,26 @@ import numpy as np
 from hctmicrobiomemskcc.tools.microbiotatools import fill_taxonomy_table
 
 
+def test_reproducibility():
+    """Does repeated fitting change the result? TODO: turn into proper test."""
+
+    rX = pd.DataFrame(np.random.standard_normal((500, 15))).applymap(np.abs).apply(lambda r: r/r.sum(), axis=1)
+    rX.rename(columns={0:'index_column'}, inplace=True)
+
+    tax = pd.DataFrame([np.ones(14), np.arange(14)],index = ["Phylum", "Family"], columns=np.arange(14)+1, ).T
+    tax.iloc[10::, 0] = 2
+    tax['Class'] = 1
+    tax['Genus'] = 0 
+    tax = tax.astype(str)
+
+
+    tumap = Taxumap(rel_abundances=rX, taxonomy=tax)
+    tumap.transform_self()
+    em1 = tumap.embedding.copy()
+    tumap.transform_self()
+    em2 = tumap.embedding.copy()
+    np.allclose(em1, em2)
+
 class TestFillTaxonomyTable(unittest.TestCase):
     """
     basic test class

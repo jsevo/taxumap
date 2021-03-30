@@ -54,6 +54,8 @@ class Taxumap:
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
         """
 
+        self.random_state = random_state
+
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
         # I am pretty sure that my use of If...Else below violates the EAFP principles - should use Try..Except instead
@@ -79,7 +81,7 @@ class Taxumap:
 
                 # Validate the rel_abundances dataset
                 try:
-                    self.rel_abundances.set_index("index_column")
+                    self.rel_abundances.set_index("index_column", inplace=True)
                 except KeyError:
                     # if it can't set the index to 'index_column', maybe it's already set
                     # let's check to see if that is not the case
@@ -108,6 +110,7 @@ class Taxumap:
                 self.fpx = fpx
                 self.rel_abundances = dataloading.parse_microbiome_data(fpx)
             else:
+                #TODO currently only file paths or pd.DataFrame accepted. Passing a numpy array raises a NameError without explanation. Adding explanation now, but should be possible to pass a np.array
                 raise NameError
         except (ValueError, NameError) as e:
             _name_value_error(e, "fpx", "rel_abundances")
@@ -362,8 +365,16 @@ class Taxumap:
             self.weights,
         )
 
+        rs = np.random.RandomState(seed=self.random_state)
+
+        if self._is_transformed:
+            print("TaxUMAP has already been fit. Re-running could yield a different embedding due to random state changes betweeen first and second run. Re-starting RandomState.")
+            rs = np.random.RandomState(seed=self.random_state)
+
+
+
         self.taxumap = UMAP(
-            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed",transform_seed=1, random_state=random_state
+            n_neighbors=neigh, min_dist=min_dist, n_epochs=epochs, metric="precomputed",transform_seed=1, random_state=rs
         ).fit(Xagg)
 
         self.embedding = self.taxumap.transform(Xagg)
