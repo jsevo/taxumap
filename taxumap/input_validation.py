@@ -34,7 +34,7 @@ def validate_microbiome_data_frame(rel_abundances, logger):
 def validate_microbiome_data(rel_abundances, logger):
     if isinstance(rel_abundances, pd.DataFrame):
         logger.info("Recognized `rel_abundances` parameter as Pandas DataFrame")
-    elif isinstance(fpx, str):
+    elif isinstance(rel_abundances, str):
         rel_abundances = dataloading.parse_microbiome_data(rel_abundances)
     else:
         raise ValueError(

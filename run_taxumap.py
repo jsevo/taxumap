@@ -39,18 +39,18 @@ if __name__ == "__main__":
     inputs = {}
     transform_inputs = {}
 
-    # setup logger
-    # for verbose
-    if args.verbose:
-        logger = setup_logger("run_taxumap", verbose=True)
-    else:
-        logger = setup_logger("run_taxumap")
+    # # setup logger
+    # # for verbose
+    # if args.verbose:
+    #     logger = setup_logger("run_taxumap", verbose=True)
+    # else:
+    #     logger = setup_logger("run_taxumap")
 
-    # for debug
-    if args.debug:
-        logger = setup_logger("run_taxumap", debug=True)
-    else:
-        logger = setup_logger("run_taxumap")
+    # # for debug
+    # if args.debug:
+    #     logger = setup_logger("run_taxumap", debug=True)
+    # else:
+    #     logger = setup_logger("run_taxumap")
 
     # for neigh
     if args.neigh is not None:
@@ -100,6 +100,12 @@ if __name__ == "__main__":
 
     if args.outdir is not None:
         inputs["outdir"] = args.outdir
+    else:
+        inputs["outdir"] = "./"
+
+    print(inputs)
+    print(transform_inputs)
 
     taxumap = Taxumap(**inputs)
-    taxumap.transform_self(save=save, **transform_inputs)
+    taxumap.transform_self(**transform_inputs)
+    taxumap.save_embedding(inputs["outdir"]+"embedding.csv")#transform_self(save=save, **transform_inputs)
