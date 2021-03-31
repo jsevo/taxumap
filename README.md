@@ -25,7 +25,7 @@ Your embedding will be saved in the `phylo-umap/results/` folder.
 
 ### Python:
 ```python
-from taxumap.taxumap import Taxumap
+from taxumap.taxumap_base import Taxumap
 
 ##### Initialize Taxumap object #####
 
