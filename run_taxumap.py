@@ -1,7 +1,7 @@
 import argparse
 
 from taxumap.custom_logging import setup_logger
-from taxumap.taxumap import Taxumap
+from taxumap.taxumap_base import Taxumap
 
 if __name__ == "__main__":
     """Please use a '/' delimiter for weights and agg_levels"""
