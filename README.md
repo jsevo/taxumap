@@ -13,6 +13,28 @@ git clone https://github.com/jsevo/phylo-umap.git
 pip install -e .
 ```
 
+## Data required
+Two tables are required: the microbiota data and a taxonomy table.
+
+The ***microbiota data file*** (`microbiota_table.csv`) must have a column with sample indices labeled 'index_column'. The remaining columns are expected to be the lowest level taxa (OTU/ASV/...):
+
+| index_column | ASV1 | ASV2 |
+| :--- | :---: | :---: |
+|'sample1'| 0.5| 0.5|
+|'sample2'|0.2| 0.8|
+
+You can see that the data is *compositional*, or that each row sums to 1. (This kind of table may also be referred to as a *relative abundance* or `rel_abundances` for that reason.) 
+
+The ***taxonomy table*** (`taxonomy.csv`) is expected to resolve higher taxonomic groups for the columns in the microbiota table. The columns of this table should contain taxonomic levels. They should be ordered from left to right in decreasing taxonomic hierarchy, e.g.
+
+| kingdom    | phylum       | ...   | ASV    |
+| :---       | :---:        | :---: | :---:  |
+| 'Bacteria' | 'Firmicutes' | ...   | 'ASV1' |
+
+Unless designated by the `-t` and `-m` flags, the data is expected to be within the `data/` folder. Results are written to the `phylo-umap/results/` folder.
+
+---
+
 ## Usage
 
 ### Command line:
@@ -93,26 +115,6 @@ See this link. (In progress)
 ---
 
 ## Details
-Two tables are required: the microbiota data and a taxonomy table.
-
-The ***microbiota data file*** (`microbiota_table.csv`) must have a column with sample indices labeled 'index_column'. The remaining columns are expected to be the lowest level taxa (OTU/ASV/...):
-
-| index_column | ASV1 | ASV2 |
-| :--- | :---: | :---: |
-|'sample1'| 0.5| 0.5|
-|'sample2'|0.2| 0.8|
-
-You can see that the data is *compositional*, or that each row sums to 1. (This kind of table may also be referred to as a *relative abundance* or `rel_abundances` for that reason.) 
-
-The ***taxonomy table*** (`taxonomy.csv`) is expected to resolve higher taxonomic groups for the columns in the microbiota table. The columns of this table should contain taxonomic levels. They should be ordered from left to right in decreasing taxonomic hierarchy, e.g.
-
-| kingdom    | phylum       | ...   | ASV    |
-| :---       | :---:        | :---: | :---:  |
-| 'Bacteria' | 'Firmicutes' | ...   | 'ASV1' |
-
-Unless designated by the `-t` and `-m` flags, the data is expected to be within the `data/` folder. Results are written to the `phylo-umap/results/` folder.
-
----
 
 ## Roadmap
 
