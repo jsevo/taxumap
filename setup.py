@@ -1,5 +1,5 @@
 # Authors: Jonas Schluter <jonas.schluter@nyulangone.org>, Grant Hussey <grant.hussey@nyulangone.org>
-# License: BSD 3 clause # Which license?
+# License: MIT
 from setuptools import setup
 
 with open("README.md", "r") as fh:

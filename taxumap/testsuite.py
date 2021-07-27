@@ -1,5 +1,5 @@
 # Authors: Jonas Schluter <jonas.schluter@nyulangone.org>
-# License: BSD 3 clause
+# License: MIT 
 __author__ = "Jonas Schluter"
 __copyright__ = "Copyright 2020, MIT License"
 

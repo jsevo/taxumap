@@ -1,3 +1,6 @@
+# Authors: Grant Hussey <grant.hussey@nyulangone.org>
+# License: MIT
+
 import pandas as pd
 
 

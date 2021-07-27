@@ -1,3 +1,6 @@
+# Authors: Jonas Schluter <jonas.schluter@nyulangone.org>, Grant Hussey <grant.hussey@nyulangone.org>
+# License: MIT
+
 import sys
 
 from taxumap.custom_logging import setup_logger
