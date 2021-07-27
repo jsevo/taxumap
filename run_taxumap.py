@@ -1,3 +1,5 @@
+# Authors: Jonas Schluter <jonas.schluter@nyulangone.org>, Grant Hussey <grant.hussey@nyulangone.org>
+# License: BSD 3 clause # Which license?
 import argparse
 
 from taxumap.custom_logging import setup_logger
@@ -108,4 +110,4 @@ if __name__ == "__main__":
 
     taxumap = Taxumap(**inputs)
     taxumap.transform_self(**transform_inputs)
-    taxumap.save_embedding(inputs["outdir"]+"embedding.csv")#transform_self(save=save, **transform_inputs)
+    taxumap.save_embedding(inputs["outdir"]+"embedding.csv")

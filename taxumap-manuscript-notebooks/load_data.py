@@ -25,9 +25,9 @@ family_table = get_composition_at_taxlevel(counts, taxonomy.reset_index(), "Fami
 # some samples recorded but not yet sequenced/sequencing failed. reindex
 samples = samples.loc[samples.SampleID.isin(asv_table.index)].copy()
 samples["Timepoint"] = samples["Timepoint"].astype(np.float)
-hct_meta["DayOfTransplant"] = hct_meta["DayOfTransplant"].astype(np.float)
+hct_meta["DayOfTransplant"] = hct_meta["TimepointOfTransplant"].astype(np.float)
 hct_meta["TimepointOfTransplant"] = hct_meta["DayOfTransplant"].astype(np.float)
-hct_day = calculate_hct_day(samples.set_index("SampleID"), hct_meta)
+# hct_day = calculate_hct_day(samples.set_index("SampleID").assign(Day = lambda r: r.Timepoint), hct_meta)
 
 # ## quick check: some samples have no hct day / no pid. are they contained in the qpcr? No:
 # no_pid_or_day = (
@@ -37,7 +37,7 @@ hct_day = calculate_hct_day(samples.set_index("SampleID"), hct_meta)
 # )
 # print(len(qpcr.reindex(no_pid_or_day).dropna()))
 
-asv_table_pp = asv_table.join(samples.set_index("SampleID").join(hct_day))
+asv_table_pp = asv_table.join(samples.assign(hctday = lambda r: r.DayRelativeToNearestHCT).set_index("SampleID"))
 asv_table_pp = asv_table_pp.dropna()
 asv_table_pp = asv_table_pp.sort_values(["PatientID", "hctday"])
 
@@ -90,13 +90,16 @@ scatter_meta_data = pd.merge_asof(
 scatter_meta_data = scatter_meta_data.set_index("SampleID")
 
 # clincal phases
+print("WARNING: NEED TO FIX THIS SECTION")
+tmp = pd.read_csv("/Users/schluj05/data/hctmicrobiomedata/tblhctmeta.csv")
+hct_meta = hct_meta.join(tmp.set_index(["PatientID", "DayOfTransplant"]).EngraftmentDayRelativeToNearestTransplantDay, on = ["PatientID", "DayOfTransplant"], how='left')
 scatter_meta_data["Phase"] = 1
 peri_engraftment = (
-    scatter_meta_data.DayRelativeToNearestTransplantDay
+    scatter_meta_data.DayRelativeToNearestHCT
     < scatter_meta_data.EngraftmentDayRelativeToNearestTransplantDay
-) & (scatter_meta_data.DayRelativeToNearestTransplantDay >= 0)
+) & (scatter_meta_data.DayRelativeToNearestHCT >= 0)
 post_engraftment = (
-    scatter_meta_data.DayRelativeToNearestTransplantDay
+    scatter_meta_data.DayRelativeToNearestHCT
     > scatter_meta_data.EngraftmentDayRelativeToNearestTransplantDay
 )
 scatter_meta_data.loc[peri_engraftment.values, "Phase"] = 2
