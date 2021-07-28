@@ -16,8 +16,7 @@ qpcr = (
     .agg(lambda v: np.power(np.product(v), 1 / len(v)))
     .reset_index()
 )
-hct_meta = alldata["metadata"]
-hct_meta["DayOfTransplant"] = hct_meta["DayOfTransplant"].astype(np.float)
+hct_meta = alldata["metadata"].copy()
 
 asv_table = get_composition_at_taxlevel(counts, taxonomy.reset_index(), "ASV")
 family_table = get_composition_at_taxlevel(counts, taxonomy.reset_index(), "Family")
@@ -27,15 +26,6 @@ samples = samples.loc[samples.SampleID.isin(asv_table.index)].copy()
 samples["Timepoint"] = samples["Timepoint"].astype(np.float)
 hct_meta["DayOfTransplant"] = hct_meta["TimepointOfTransplant"].astype(np.float)
 hct_meta["TimepointOfTransplant"] = hct_meta["DayOfTransplant"].astype(np.float)
-# hct_day = calculate_hct_day(samples.set_index("SampleID").assign(Day = lambda r: r.Timepoint), hct_meta)
-
-# ## quick check: some samples have no hct day / no pid. are they contained in the qpcr? No:
-# no_pid_or_day = (
-#     (genus_table_pp.isna().sum(axis=1))
-#     .loc[(genus_table_pp.isna().sum(axis=1)) == 1]
-#     .index
-# )
-# print(len(qpcr.reindex(no_pid_or_day).dropna()))
 
 asv_table_pp = asv_table.join(samples.assign(hctday = lambda r: r.DayRelativeToNearestHCT).set_index("SampleID"))
 asv_table_pp = asv_table_pp.dropna()
@@ -55,55 +45,12 @@ XASV = X.set_index("SampleID")[[x for x in X.columns if "ASV_" in x]]
 
 ########################################
 scatter_meta_data = pd.read_csv(
-    "/Users/schluj05/data/MSKCCDATA/meta_data_for_scatter_jitter_volatility.csv",
-    index_col="Sample.ID",
+    "/Users/schluj05/data/MSKCCDATA/meta_data_for_scatter_jitter_volatility_clean.csv",
+    index_col="SampleID",
 )
 scatter_meta_data.index.name = "SampleID"
-scatter_meta_data.drop(
-    columns=[
-        "Unnamed: 0",
-        "Unnamed: 0.1",
-        "phylo-UMAP1",
-        "phylo-UMAP2",
-        "kernelPCA1",
-        "kernelPCA2",
-        "asvUMAP2",
-        "asvUMAP1",
-        "asvSCALEDUMAP1",
-        "asvSCALEDUMAP1.1",
-        "tsne0",
-        "tsne1",
-    ],
-    inplace=True,
-)
-scatter_meta_data = scatter_meta_data.drop_duplicates()
-scatter_meta_data = samples.set_index("SampleID").join(scatter_meta_data)
-scatter_meta_data = scatter_meta_data.loc[XASV.index]
-scatter_meta_data = pd.merge_asof(
-    scatter_meta_data.reset_index().sort_values("Timepoint"),
-    hct_meta.sort_values("TimepointOfTransplant"),
-    left_on="Timepoint",
-    right_on="TimepointOfTransplant",
-    by="PatientID",
-    direction="nearest",
-)
-scatter_meta_data = scatter_meta_data.set_index("SampleID")
 
-# clincal phases
-print("WARNING: NEED TO FIX THIS SECTION")
-tmp = pd.read_csv("/Users/schluj05/data/hctmicrobiomedata/tblhctmeta.csv")
-hct_meta = hct_meta.join(tmp.set_index(["PatientID", "DayOfTransplant"]).EngraftmentDayRelativeToNearestTransplantDay, on = ["PatientID", "DayOfTransplant"], how='left')
-scatter_meta_data["Phase"] = 1
-peri_engraftment = (
-    scatter_meta_data.DayRelativeToNearestHCT
-    < scatter_meta_data.EngraftmentDayRelativeToNearestTransplantDay
-) & (scatter_meta_data.DayRelativeToNearestHCT >= 0)
-post_engraftment = (
-    scatter_meta_data.DayRelativeToNearestHCT
-    > scatter_meta_data.EngraftmentDayRelativeToNearestTransplantDay
-)
-scatter_meta_data.loc[peri_engraftment.values, "Phase"] = 2
-scatter_meta_data.loc[post_engraftment.values, "Phase"] = 3
+scatter_meta_data = scatter_meta_data.drop_duplicates()
 
 
 ########################################
