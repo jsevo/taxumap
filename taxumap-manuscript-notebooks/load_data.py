@@ -8,7 +8,8 @@ __copyright__ = "Copyright 2020, MIT License"
 alldata = load_all_data()
 counts = alldata["counts"]
 taxonomy = alldata["taxonomy"]
-taxonomy_meta = alldata["taxonomy_meta"]
+# make generically labeled Genera unique
+taxonomy.loc[taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"), 'Genus'] = taxonomy.loc[taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"), 'Genus'] + "___" + taxonomy.loc[taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"), 'Genus'].indextaxonomy_meta = alldata["taxonomy_meta"]
 samples = alldata["samples"]
 qpcr = alldata["qpcr"]
 qpcr = (
@@ -51,8 +52,8 @@ scatter_meta_data = pd.read_csv(
 scatter_meta_data.index.name = "SampleID"
 
 scatter_meta_data = scatter_meta_data.drop_duplicates()
-
-
+samples['Day'] = samples['DayRelativeToNearestHCT']
+scatter_meta_data['Day'] = scatter_meta_data['DayRelativeToNearestHCT']
 ########################################
 
 _tax = taxonomy.loc[XASV.columns[0:100]]

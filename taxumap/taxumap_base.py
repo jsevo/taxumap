@@ -72,7 +72,7 @@ class Taxumap:
         else:
             self.name = None
 
-    def transform_self(self, scale=False, debug=False, **kwargs):
+    def transform_self(self, scale=False, debug=False, distance_metric = "braycurtis", **kwargs):
         """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
 
         Args:
@@ -106,8 +106,6 @@ class Taxumap:
             logger_taxumap.info("Setting epochs to %d" % epochs)
         else:
             epochs = kwargs["epochs"]
-
-        distance_metric = "braycurtis"
 
         # Shouldn't need `try...except` because any Taxumap object should have proper attributes
         Xagg = tax_agg(

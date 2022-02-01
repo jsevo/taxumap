@@ -14,9 +14,6 @@ if RUNEMBEDDINGS:
     # non-phylo umap
     embedding_non_phylo_unscaled = UMAP(n_neighbors=120,min_dist=0.2, metric="manhattan").fit_transform(XASV)
     
-    
-    # embedding_non_phylo_scaled = UMAP(n_neighbors=120,min_dist=0.2, metric="manhattan").fit_transform(MinMaxScaler().fit_transform(XASV))
-
 
 RUNTAXUMAPS = False
 if RUNTAXUMAPS: 
@@ -32,18 +29,6 @@ if RUNTAXUMAPS:
     withusercolors=taxonomy_meta[["HexColor"]]
 
 
-#     TAXUMAP, X_embedded, taxumap_Xscaled, taxumap_X = taxumap(agg_levels,
-#                      withscaling,
-#                      distanceperlevel,
-#                      distancemetric,
-#                      printfigure,
-#                      printwithdiversity,
-#                      X_in,
-#                      tax,
-#                      withusercolors,
-#                      debug=True, #return tables
-#                      save_embedding=False #save xy coordinates
-#                                                              );
     
     TAXUMAP_alllevels, X_embedded_alllevels, taxumap_Xscaled_alllevels, taxumap_X_alllevels = taxumap(["Phylum", "Class", "Order", "Family", "Genus"],
                      withscaling,
@@ -58,33 +43,6 @@ if RUNTAXUMAPS:
                      save_embedding=False #save xy coordinates
                                                              );
 
-#     TAXUMAPSCALED, X_embedded_scaled, taxumap_Xscaled_scaled, taxumap_X_scaled = taxumap(
-#                      agg_levels,
-#                      True,
-#                      False,
-#                      "euclidean",
-#                      printfigure,
-#                      printwithdiversity,
-#                      X_in,
-#                      tax,
-#                      withusercolors,
-#                      debug=True, #return tables
-#                      save_embedding=True#save xy coordinates
-#                                                              );
-
-#     TAXUMAPSCALEDeuclidean, X_embedded_scaledeuclidean, taxumap_Xscaled_scaledeuclidean, taxumap_X_scaledeuclidean = taxumap(
-#                      agg_levels,
-#                      True,
-#                      False,
-#                      "euclidean",
-#                      printfigure,
-#                      printwithdiversity,
-#                      X_in,
-#                      tax,
-#                      withusercolors,
-#                      debug=True, #return tables
-#                      save_embedding=True#save xy coordinates
-#                                                              );
 LOADPCoAS = False
 if LOADPCoAS:
     pcoa_embedding_unweighted_unifrac = PCA(n_components=2).fit_transform(unweighted_unifrac.set_index("SampleID"))
@@ -94,8 +52,6 @@ if LOADPCoAS:
     
 del unweighted_unifrac
 del weighted_unifrac
-#del TAXUMAPSCALED, taxumap_Xscaled_scaled, taxumap_X_scaled
-#del TAXUMAPSCALEDeuclidean, taxumap_Xscaled_scaledeuclidean, taxumap_X_scaledeuclidean
 del TAXUMAP_alllevels, taxumap_Xscaled_alllevels, taxumap_X_alllevels
 
 write_now=False
