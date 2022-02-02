@@ -9,7 +9,7 @@ Visualize structure in large microbiome datasets. Implements a microbiome resear
 
 ## 
 ```
-git clone https://github.com/jsevo/phylo-umap.git
+git clone https://github.com/jsevo/taxumap.git
 pip install -e .
 ```
 
