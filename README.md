@@ -42,7 +42,7 @@ Unless designated by the `-t` and `-m` flags, the data is expected to be within 
 ```bash
 python taxumap/run_taxumap.py -t taxonomy.csv -m microbiota_table.csv -n 15
 ```
-Your embedding will be saved in the `taxumap/results/` folder. 
+Your embedding will be saved in your current folder, or you can provide a location with the `-o path/to/folder/` flag. 
 
 
 ### Python:
