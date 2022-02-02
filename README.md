@@ -31,7 +31,7 @@ The ***taxonomy table*** (`taxonomy.csv`) is expected to resolve higher taxonomi
 | :---       | :---:        | :---: | :---:  |
 | 'Bacteria' | 'Firmicutes' | ...   | 'ASV1' |
 
-Unless designated by the `-t` and `-m` flags, the data is expected to be within the `data/` folder. Results are written to the `phylo-umap/results/` folder.
+Unless designated by the `-t` and `-m` flags, the data is expected to be within the `data/` folder. Results are written to the `taxumap/results/` folder.
 
 ---
 
@@ -40,9 +40,9 @@ Unless designated by the `-t` and `-m` flags, the data is expected to be within 
 ### Command line:
 
 ```bash
-python phylo-umap/run_taxumap.py -t taxonomy.csv -m microbiota_table.csv -n 15
+python taxumap/run_taxumap.py -t taxonomy.csv -m microbiota_table.csv -n 15
 ```
-Your embedding will be saved in the `phylo-umap/results/` folder. 
+Your embedding will be saved in the `taxumap/results/` folder. 
 
 
 ### Python:
@@ -101,7 +101,7 @@ t.save_embedding()
 
 ### Optional, change default behavior
 
-* `-o` or `--outdir`: Where to save embedding. Defaults to `phylo-umap/results`.
+* `-o` or `--outdir`: Where to save embedding. Defaults to `taxumap/results`.
 * `-v` or `--verbose`: Add flag to log INFO-level information.
 * `-d` or `--debug`: Add flag to log DEBUG-level information.
 * `-s` or `--save`: Set to False to not save the embedding. Defaults to True.
