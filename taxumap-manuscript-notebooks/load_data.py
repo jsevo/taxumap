@@ -9,7 +9,8 @@ alldata = load_all_data()
 counts = alldata["counts"]
 taxonomy = alldata["taxonomy"]
 # make generically labeled Genera unique
-taxonomy.loc[taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"), 'Genus'] = taxonomy.loc[taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"), 'Genus'] + "___" + taxonomy.loc[taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"), 'Genus'].indextaxonomy_meta = alldata["taxonomy_meta"]
+taxonomy.loc[taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"), 'Genus'] = taxonomy.loc[taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"), 'Genus'] + "___" + taxonomy.loc[taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"), 'Genus'].index
+taxonomy_meta = alldata["taxonomy_meta"]
 samples = alldata["samples"]
 qpcr = alldata["qpcr"]
 qpcr = (

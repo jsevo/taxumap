@@ -101,7 +101,10 @@ if __name__ == "__main__":
         inputs["microbiota_data"] = "./data/microbiota_table.csv"
 
     if args.outdir is not None:
-        inputs["outdir"] = args.outdir
+        outpath = args.outdir 
+        if outpath[-1] != '/':
+            outpath = outpath+'/'
+        inputs["outdir"] = outpath 
     else:
         inputs["outdir"] = "./"
 
