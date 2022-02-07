@@ -225,7 +225,7 @@ class Taxumap(TaxumapMixin):
         return self
 
     def scatter(
-        self, figsize=(16, 10), save=False, outdir=None, ax=None, fig=None, **kwargs
+        self, figsize=(6, 4), save=False, outdir=None, ax=None, fig=None, **kwargs
     ):
         # TODO I would like this removed. There is a visualizations module which has already got appropriate functions. should not be a method of this class.
 
