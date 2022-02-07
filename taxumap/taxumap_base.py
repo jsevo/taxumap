@@ -30,7 +30,7 @@ from taxumap.errors import throw_unknown_save_error, _name_value_error
 logger_taxumap = setup_logger("taxumap", verbose=False, debug=False)
 
 
-class Taxumap:
+class Taxumap(TaxumapMixin):
     """Taxumap object for running TaxUMAP algorithm"""
 
     def __init__(
@@ -56,7 +56,7 @@ class Taxumap:
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
         """
         self.random_state = random_state
-        self._is_transformed = False
+        # self._is_transformed = False
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
         weights, rel_abundances, taxonomy = validate_inputs(
@@ -145,7 +145,7 @@ class Taxumap:
         self.df_embedding = pd.DataFrame(
             self.embedding, columns=["taxumap1", "taxumap2"], index=self.index
         )
-        self._is_transformed = True
+        # self._is_transformed = True
 
         if debug:
             self.Xagg = Xagg
