@@ -4,45 +4,52 @@ Visualize structure in large microbiome datasets. Implements a microbiome resear
 
 ## Installation
 
-> *Notice:* TaxUMAP will be made available on both PyPi and Bioconda for installation via pip and conda. But until then, please use `pip install -e` as described below to install in developer mode.
+> *Notice:* TaxUMAP will be made available on both PyPi and Bioconda for installation via pip and conda. But until then, please use `pip install -e .` as described below to install in developer mode.
 
 
-## 
 ```
 git clone https://github.com/jsevo/taxumap.git
 pip install -e .
 ```
 
 ## Data required
-Two tables are required: the microbiota data and a taxonomy table.
+Two tables are required: the **microbiota data** and a **taxonomy table**.
 
 The ***microbiota data file*** (`microbiota_table.csv`) must have a column with sample indices labeled 'index_column'. The remaining columns are expected to be the lowest level taxa (OTU/ASV/...):
 
-| index_column | ASV1 | ASV2 |
-| :--- | :---: | :---: |
-|'sample1'| 0.5| 0.5|
-|'sample2'|0.2| 0.8|
+| index_column | ASV1 | ASV2 | ... | ASV500 |
+| :--- | :---: | :---: | :---: | :---: |
+|'sample1'| 0.5| 0.4| ... | 0.1 |
+|'sample2'|0.2| 0.6| ... | 0.2 |
+| ... | ... | ... | ... | ... |
+|'sample3'|0.1| 0.4| ... | 0.5 |
 
-You can see that the data is *compositional*, or that each row sums to 1. (This kind of table may also be referred to as a *relative abundance* or `rel_abundances` for that reason.) 
 
-The ***taxonomy table*** (`taxonomy.csv`) is expected to resolve higher taxonomic groups for the columns in the microbiota table. The columns of this table should contain taxonomic levels. They should be ordered from left to right in decreasing taxonomic hierarchy, e.g.
+The ***taxonomy table*** (`taxonomy.csv`) is expected to resolve higher taxonomic groups for the columns in the microbiota table. The columns of this table should contain taxonomic levels. Additionally, **the taxonomy table needs to contain a column labeled ASV or OTU**. Taxonomic levels should be ordered from left to right in decreasing taxonomic hierarchy, e.g.
 
-| kingdom    | phylum       | ...   | ASV    |
-| :---       | :---:        | :---: | :---:  |
-| 'Bacteria' | 'Firmicutes' | ...   | 'ASV1' |
+
+| ASV | Kingdom    | Phylum       | ...   | Genus    | Species |
+| :---: | :---:       | :---:        | :---: | :---:  |:---:  |
+| 'ASV1' | 'Bacteria' | 'Firmicutes' | ...   | 'Staphylococcus' | 'aureus' |
+| 'ASV2' | 'Bacteria' | 'Bacillota' | ...   | '[Ruminococcus]' | 'gnavus' |
+| ... | ... | ... | ...   | ... |
+| 'ASV500' | 'Bacteria' | 'Verrucomicrobia' | ...  | 'Akkermansia' | 'muciniphila' |
+
+In the above tables, the ``''`` designates strings. **Any UNKNOWN taxonomic levels (e.g., 'unknown species') should be set to np.nan or the string 'nan'.** For more information on how to properly resolve unknown taxonomic levels for TaxUMAP, **please see the notebook `examples/cleaning_taxonomy_table.ipynb`**.  Finally, the taxonomy table should be *monophyletic*.
+
 
 Unless designated by the `-t` and `-m` flags, the data is expected to be within the `data/` folder. Results are written to the `taxumap/results/` folder.
 
 ---
 
-## Usage
+## Quickstart
 
 ### Command line:
 
 ```bash
 python taxumap/run_taxumap.py -t taxonomy.csv -m microbiota_table.csv -n 15
 ```
-Your embedding will be saved in your current folder, or you can provide a location with the `-o path/to/folder/` flag. 
+Your embedding will be saved in your current folder, or you can provide a location with the `-o path/to/folder/` flag.
 
 
 ### Python:
@@ -52,37 +59,34 @@ from taxumap.taxumap_base import Taxumap
 ##### Initialize Taxumap object #####
 
 # From file
-t = Taxumap(taxonomy='path/to/taxonomy.csv', 
-            rel_abundances='path/to/microbiota_table.csv')
-
-# OR #
-
-# From local variable scope
-## df_taxonomy :: pd.DataFrame
-## rel_abundance :: pd.DataFrame
-
-t = Taxumap(taxonomy=df_taxonomy, 
-            rel_abundances=df_rel_abundances)
+tu = Taxumap(taxonomy='path/to/taxonomy.csv',
+            microbiome_data='path/to/microbiota_table.csv')
 
 
 ##### Run the transformation and look at the results #####
 
 # Transform the data (an inplace function)
-t.transform_self(neigh=13)
+tu.transform_self()
 
 # Raw embedding dataframe
-t.df_embedding
+tu.df_embedding
 
 # "Which taxon dominate each sample?" dataframe
-t.df_dominant_taxon
+tu.df_dominant_taxon
 
-# Visualize the embedding
-t.scatter()
+# Visualize the embedding (will save to present working directory as "taxumap_scatterplot.pdf")
+tu.scatter(save=True)
 
-# Save the embedding
-t.save_embedding() 
+# Save the embedding (will save to present working directory as "taxumap_embedding.csv")
+tu.save_embedding('path/to/savedir')
 
 ```
+
+### Notebook:
+
+* An interactive Jupyter notebook file is provided in `examples/olin_example.ipynb`. ***This demos TaxUMAP on an example dataset we provide.*** See [below](#example_data) for more information.
+
+
 ---
 
 ## Flags for `run_taxumap.py`
@@ -95,9 +99,9 @@ t.save_embedding()
 
 ### Optional, but recommended
 
-* `-a` or `--agg_levels`: Which taxonomic levels to aggregate, in the form of a `/`-delimined string (e.g. `Phylum/Family`)
-* `-w` or `--weights`: Weights to give to each taxonomic level defined in `--agg_levels`, in the form of a `/`-delimined string (e.g. `5/6`, `0.5/2`, `6/2/1`, etc). Defaults to 1 for each.
-* 
+* `-a` or `--agg_levels`: Which taxonomic levels to aggregate, in the form of a `/`-delimined string (e.g. `Phylum/Family`, `Family`, `Phylum/Order/Genus`)
+* `-w` or `--weights`: Weights to give to each taxonomic level defined in `--agg_levels`, in the form of a `/`-delimined string (e.g. `5/6`, `0.5/2`, `6/2/1`, etc). Defaults to 1 for each specified aggregation level.
+*
 
 ### Optional, change default behavior
 
@@ -105,12 +109,15 @@ t.save_embedding()
 * `-v` or `--verbose`: Add flag to log INFO-level information.
 * `-d` or `--debug`: Add flag to log DEBUG-level information.
 * `-s` or `--save`: Set to False to not save the embedding. Defaults to True.
-* `-b` or `--min_dist`: Change the `min_dist` parameter passed to the UMAP algorithm. See documentation [here](https://umap-learn.readthedocs.io/en/latest/parameters.html?highlight=min_dist#min-dist). 
+* `-b` or `--min_dist`: Change the `min_dist` parameter passed to the UMAP algorithm. See documentation [here](https://umap-learn.readthedocs.io/en/latest/parameters.html?highlight=min_dist#min-dist).
 
 
-## Documentation for Taxumap as a Package
+## Documentation
 
-See this link. (In progress)
+ * To-do: Explain weights
+ * To-do: Explain agg_levels
+
+ * These concepts are illustrated in the notebook found at `examples/adjusting_taxumap_parameters.ipynb`.
 
 ---
 
@@ -122,11 +129,11 @@ See this link. (In progress)
 
 We will be updating this package to include examples and adaptations needed for such use cases.
 
-[2] We will be updating general user issues. Please submit a 
+[2] We will be updating general user issues. Please submit a GitHub issue for any comments, questions, concerns.
 
 ---
 
-## Example data
+## Example notebook (with example data) <a name="example_data"></a>
 
 A dataset provided by Axel Olin works well for those wanting to try out the features of taxUMAP or to better understand how to format your own data properly.
 
@@ -139,7 +146,9 @@ Publication
 Dataset
 > Olin, Axel (2018), “Stereotypic Immune System Development in Newborn Children”, Mendeley Data, v1
 
-Solely for convenience, I am providing in the `taxumap/example_data` directory a pre-cleaned version of this dataset, as allowed under the `CC BY 4.0` license. I also provide a Jupyter Notebook to see how the data was cleaned.
+Solely for convenience, I am providing in the `taxumap/examples/example_data` directory a pre-cleaned version of this dataset, as allowed under the `CC BY 4.0` license. I also provide a Jupyter Notebook to see how the data was cleaned.
+
+
 
 ## License
 

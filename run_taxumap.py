@@ -1,6 +1,7 @@
 # Authors: Jonas Schluter <jonas.schluter@nyulangone.org>, Grant Hussey <grant.hussey@nyulangone.org>
-# License: MIT 
+# License: MIT
 import argparse
+import numpy as np
 
 from taxumap.custom_logging import setup_logger
 from taxumap.taxumap_base import Taxumap
@@ -10,9 +11,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Get options for taxumap run")
 
-    parser.add_argument(
-        "-m", "--microbiota_data", help="Microbiota (rel_abundances) Table"
-    )
+    parser.add_argument("-m", "--microbiota_data", help="Microbiota (rel_abundances) Table")
     parser.add_argument("-t", "--taxonomy", help="Taxonomy Table")
     parser.add_argument("-w", "--weights", help="Weights")
     parser.add_argument("-a", "--agg_levels", help="Aggregation Levels")
@@ -79,9 +78,7 @@ if __name__ == "__main__":
 
     # AGG_LEVELS
     if args.agg_levels is not None:
-        inputs["agg_levels"] = list(
-            map(lambda x: x.capitalize(), args.agg_levels.split("/"))
-        )
+        inputs["agg_levels"] = list(map(lambda x: x.capitalize(), args.agg_levels.split("/")))
 
     # weights
     if args.weights is not None:
@@ -101,10 +98,10 @@ if __name__ == "__main__":
         inputs["microbiota_data"] = "./data/microbiota_table.csv"
 
     if args.outdir is not None:
-        outpath = args.outdir 
-        if outpath[-1] != '/':
-            outpath = outpath+'/'
-        inputs["outdir"] = outpath 
+        outpath = args.outdir
+        if outpath[-1] != "/":
+            outpath = outpath + "/"
+        inputs["outdir"] = outpath
     else:
         inputs["outdir"] = "./"
 
@@ -113,4 +110,4 @@ if __name__ == "__main__":
 
     taxumap = Taxumap(**inputs)
     taxumap.transform_self(**transform_inputs)
-    taxumap.save_embedding(inputs["outdir"]+"embedding.csv")
+    taxumap.save_embedding(inputs["outdir"] + "embedding.csv")

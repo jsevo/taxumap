@@ -1,5 +1,5 @@
 # Authors: Jonas Schluter <jonas.schluter@nyulangone.org>, Grant Hussey <grant.hussey@nyulangone.org>
-# License: MIT 
+# License: MIT
 
 __author__ = ["Jonas Schluter", "Grant Hussey"]
 __copyright__ = "Copyright 2020, MIT License"
@@ -12,6 +12,7 @@ import logging
 from pathlib import Path
 
 import matplotlib as mpl
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -29,6 +30,9 @@ from taxumap.errors import throw_unknown_save_error, _name_value_error
 
 logger_taxumap = setup_logger("taxumap", verbose=False, debug=False)
 
+mpl.rcParams["pdf.fonttype"] = 42
+mpl.rcParams["ps.fonttype"] = 42
+
 
 class Taxumap(TaxumapMixin):
     """Taxumap object for running TaxUMAP algorithm"""
@@ -40,7 +44,6 @@ class Taxumap(TaxumapMixin):
         microbiota_data=None,
         taxonomy=None,
         name=None,
-        outdir=None,
         random_state=42,
     ):
 
@@ -72,22 +75,18 @@ class Taxumap(TaxumapMixin):
         else:
             self.name = None
 
-    def transform_self(self, scale=False, debug=False, distance_metric = "braycurtis", **kwargs):
+    def transform_self(self, scale=False, debug=False, distance_metric="braycurtis", **kwargs):
         """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
 
         Args:
             debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
         """
 
-        # Maybe better way of implementing this
-
         if "neigh" not in kwargs:
             logger_taxumap.warning(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
-            neigh = (
-                120 if len(self.rel_abundances) > 120 else len(self.rel_abundances) - 1
-            )
+            neigh = 120 if len(self.rel_abundances) > 120 else len(self.rel_abundances) - 1
         else:
             neigh = kwargs["neigh"]
 
@@ -98,12 +97,9 @@ class Taxumap(TaxumapMixin):
             min_dist = kwargs["min_dist"]
 
         if "epochs" not in kwargs:
-            epochs = (
-                5000
-                if neigh < 120
-                else (1000 if len(self.rel_abundances) < 5000 else 1000)
-            )
+            epochs = 5000 if neigh < 120 else (1000 if len(self.rel_abundances) < 5000 else 1000)
             logger_taxumap.info("Setting epochs to %d" % epochs)
+
         else:
             epochs = kwargs["epochs"]
 
@@ -120,8 +116,9 @@ class Taxumap(TaxumapMixin):
 
         if self._is_transformed:
             print(
-                "TaxUMAP has already been fit. Re-running could yield a different embedding due to random state changes betweeen first and second run. Re-starting RandomState."
+                "TaxUMAP has already been fit. Re-running could yield a different embedding due to random state changes betweeen first and second run. Re-seeding random number generator RandomState."
             )
+
             rs = np.random.RandomState(seed=self.random_state)
 
         with warnings.catch_warnings():
@@ -158,9 +155,7 @@ class Taxumap(TaxumapMixin):
         # DataFrame where each row is the maximum taxon corresponding to the
         # shared index in the column index_column
         df_dom_tax_per_sample = (
-            pd.DataFrame(
-                self.rel_abundances.idxmax(axis="columns"), columns=["max_tax"]
-            )
+            pd.DataFrame(self.rel_abundances.idxmax(axis="columns"), columns=["max_tax"])
             .reset_index()
             .set_index("max_tax")
         )
@@ -172,13 +167,9 @@ class Taxumap(TaxumapMixin):
         )
 
         # all below here, I am cleaning the prelim_df_table for final return
-        tax_hierarchy = prelim_df_table.columns[
-            prelim_df_table.columns != "index_column"
-        ]
+        tax_hierarchy = prelim_df_table.columns[prelim_df_table.columns != "index_column"]
 
-        new_tax_hierarchy = [
-            "dom_" + each_level.lower() for each_level in tax_hierarchy
-        ]
+        new_tax_hierarchy = ["dom_" + each_level.lower() for each_level in tax_hierarchy]
 
         change_labels = dict(zip(tax_hierarchy, new_tax_hierarchy))
 
@@ -188,69 +179,40 @@ class Taxumap(TaxumapMixin):
 
         return df_final
 
-    @classmethod
-    def from_pickle(cls, fp):
-        import pickle
+    def save_embedding(self, path=None):
+
+        if path is None:
+            path = "taxumap_embedding.csv"
 
         try:
-            with open(fp, "rb") as f:
-                data = pickle.load(f)
-        except Exception:
-            logger_taxumap.exception("Something went wrong loading from pickle")
-        else:
-            logger_taxumap.info("Successfully located pickle file")
-
-        return data
-
-    def to_pickle(self, outdir=".", name=None):
-
-        import pickle
-
-        if name is None:
-            name = "tumap_pickle_random_name%d" % np.random.randint(
-                10000, 999999234
-            )  # self._embedded_pickle_name
-
-        with open(os.path.join(outdir, name), "wb") as f:
-            pickle.dump(self, f)
-
-        return self
-
-    def save_embedding(self, filepath):
-
-        try:
-            self.df_embedding.to_csv(filepath)
+            self.df_embedding.to_csv(path)
         except Exception as e:
-            throw_unknown_save_error(e)
+            print(e)
+
         return self
 
-    def scatter(
-        self, figsize=(6, 4), save=False, outdir=None, ax=None, fig=None, **kwargs
-    ):
-        # TODO I would like this removed. There is a visualizations module which has already got appropriate functions. should not be a method of this class.
+    def scatter(self, figsize=(6, 4), save=False, outdir=None, **kwargs):
 
         if not self._is_transformed:
             raise AttributeError(
                 "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
             )
 
-        if (fig is None) or (ax is None):
-            fig, ax = plt.subplots(figsize=figsize)
+        fig, ax = plt.subplots(figsize=figsize)
 
         ax.scatter(
             self.df_embedding[self.df_embedding.columns[0]],
             self.df_embedding[self.df_embedding.columns[1]],
             **kwargs,
         )
+
         ax.set_xlabel(self.taxumap1)
         ax.set_ylabel(self.taxumap2)
 
         ax.set_title(self.name)
 
-        sns.despine(trim=True, offset=5)
-
         if save:
-            _save(fig.savefig, outdir, self._plot_name)
+            fig.savefig(os.path.join(outdir, self._plot_name))
 
         return fig, ax
 
@@ -258,56 +220,4 @@ class Taxumap(TaxumapMixin):
         return f"Taxumap(agg_levels = {self.agg_levels}, weights = {self.weights})"
 
     def __str__(self):
-        return (
-            f"Taxumap with agg_levels = {self.agg_levels} and weights = {self.weights}."
-        )
-
-
-def _save(fxn, outdir, filename, **kwargs):
-    #TODO: I do not see the need for this failure catching routine. It makes the code less easy to follow. Consider removing
-    """[summary]
-
-    Args:
-        fxn (function handle): f(Path-like object or str)
-        outdir ([type]): [description]
-        filename ([type]): [description]
-
-    Raises:
-        TypeError: [description]
-    """
-
-    if not callable(fxn):
-        raise TypeError("'fxn' passed is not callable")
-
-    if outdir is not None:
-        try:
-            outdir = Path(outdir).resolve(strict=True)
-        except (FileNotFoundError, TypeError) as e:
-            logger_taxumap.warning(
-                '\nNo valid outdir was declared.\nSaving data into "./results" folder.\n'
-            )
-
-    elif outdir is None:
-        outdir = Path("./results").resolve()
-        try:
-            os.mkdir(outdir)
-            logger_taxumap.info("Making ./results folder...")
-        except FileExistsError:
-            logger_taxumap.info("./results folder already exists")
-        except Exception as e:
-            throw_unknown_save_error(e)
-            sys.exit(2)
-
-    try:
-        fxn(os.path.join(outdir, filename), **kwargs)
-    except Exception as e:
-        throw_unknown_save_error(e)
-    else:
-        logger_taxumap.info("Save successful")
-
-
-def throw_unknown_save_error(e):
-    logger_taxumap.exception(
-        "\nUnknown error has occured. Cannot save embedding as instructed."
-    )
-    sys.exit(2)
+        return f"Taxumap with agg_levels = {self.agg_levels} and weights = {self.weights}."
