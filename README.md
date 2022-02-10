@@ -84,7 +84,7 @@ tu.save_embedding('path/to/embedding.csv')
 
 ### Notebook:
 
-* An interactive Jupyter notebook file is provided in `examples/olin_example.ipynb`. ***This demos TaxUMAP on an example dataset we provide.*** See [below](#example_data) for more information.
+* An interactive Jupyter notebook file is provided in `examples/taxumap_example.ipynb`. ***This demos TaxUMAP on an example dataset we provide.*** See [below](#example_data) for more information.
 
 * Additionally, two other notebooks are provided to cover both adjusting the TaxUMAP default `agg_levels` and `weights` parameters (`examples/adjusting_taxumap_parameters.ipynb`), as well as cleaning the taxonomy table (`examples/cleaning_taxonomy_table.ipynb`).
 
