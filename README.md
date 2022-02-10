@@ -1,6 +1,6 @@
 # TaxUMAP
 
-Visualize structure in large microbiome datasets. Implements a microbiome research-focused extension of the Uniform Manifold Approximation and Projection (UMAP) by calculating microbiome sample by sample distances at different taxonomic aggregations of taxon abundances, and allowing for custom weighting of aggregates.
+Visualize structure in large microbiome datasets. Implements a microbiome-research-focused extension of the Uniform Manifold Approximation and Projection (UMAP) by calculating microbiome sample-by-sample distances at different taxonomic aggregations of taxon abundances, and allowing for custom weighting of aggregates.
 
 ## Installation
 
@@ -108,8 +108,6 @@ tu.save_embedding('path/to/embedding.csv')
 ### Optional, change default behavior
 
 * `-o` or `--outdir`: Where to save embedding. Defaults to `taxumap/results`.
-* `-v` or `--verbose`: Add flag to log INFO-level information.
-* `-d` or `--debug`: Add flag to log DEBUG-level information.
 * `-s` or `--save`: Set to False to not save the embedding. Defaults to True.
 * `-b` or `--min_dist`: Change the `min_dist` parameter passed to the UMAP algorithm. See documentation [here](https://umap-learn.readthedocs.io/en/latest/parameters.html?highlight=min_dist#min-dist).
 

@@ -4,6 +4,7 @@
 import pandas as pd
 import taxumap.dataloading as dataloading
 import numpy as np
+import warnings
 
 
 def validate_weights(weights, agg_levels):
@@ -15,7 +16,7 @@ def validate_weights(weights, agg_levels):
     return weights
 
 
-def validate_microbiome_data_frame(rel_abundances, logger):
+def validate_microbiome_data_frame(rel_abundances):
     # Validate the rel_abundances dataset
     try:
         rel_abundances.set_index("index_column", inplace=True)
@@ -36,27 +37,27 @@ def validate_microbiome_data_frame(rel_abundances, logger):
     return rel_abundances
 
 
-def validate_microbiome_data(rel_abundances, logger):
+def validate_microbiome_data(rel_abundances):
     if isinstance(rel_abundances, pd.DataFrame):
-        logger.info("Recognized `rel_abundances` parameter as Pandas DataFrame")
+        warnings.warn("Recognized `rel_abundances` parameter as Pandas DataFrame")
     elif isinstance(rel_abundances, str):
         rel_abundances = dataloading.parse_microbiome_data(rel_abundances)
     else:
         raise ValueError(
             "The microbiome data should be provided as either a pd.DataFrame or path to csv file"
         )
-    rel_abundances = validate_microbiome_data_frame(rel_abundances, logger)
+    rel_abundances = validate_microbiome_data_frame(rel_abundances)
 
     return rel_abundances
 
 
-# def fill_taxonomy_table(tax, logger):
+# def fill_taxonomy_table(tax):
 #     """
 #     Helper function that fills nan's in a taxonomy table. Such gaps are filled 'from the left' with the next higher non-nan taxonomy level and the lowest level (e.g. OTU# or ASV#) appended.
 #     TODO make less ugly
 #     """
 #     if "kingdom" not in root_level.lower():
-#         logger.info(
+#         warnings.warn(
 #             f"the highest taxonomic level found is {root_level}, not kingdom as expected. not attempting to fill gaps in taxonomy"
 #         )
 #         return tax
@@ -64,7 +65,7 @@ def validate_microbiome_data(rel_abundances, logger):
 #     root_level = tax.columns[0]
 #     # root level: should be Kingdom
 #     if "kingdom" not in root_level.lower():
-#         logger.info(
+#         warnings.warn(
 #             f"the highest taxonomic level found is {root_level}, not kingdom as expected. beware"
 #         )
 #     tax[root_level] = tax[root_level].fillna(f"unknown_{root_level}")
@@ -197,19 +198,19 @@ def ensure_monophyletic_for_hct_dataset(taxonomy):
     return taxonomy
 
 
-def normalize_taxonomy(taxonomy, logger):
+def normalize_taxonomy(taxonomy):
     try:
-        taxonomy = fill_taxonomy_table(taxonomy)
+        taxonomy = fill_tax_table(taxonomy)
     except:
-        logger.info("taxonomy table gap filling failed")
+        warnings.warn("taxonomy table gap filling failed")
     try:
         taxonomy = ensure_monophyletic_for_hct_dataset(taxonomy)
     except:
-        logger.info("ensure_monophyletic_for_hct_dataset failed. likely not hct data set.")
+        warnings.warn("ensure_monophyletic_for_hct_dataset failed. likely not hct data set.")
     return taxonomy
 
 
-def validate_taxonomy(taxonomy, logger):
+def validate_taxonomy(taxonomy):
     # Set taxonomy df
     try:
         if taxonomy is None:
@@ -222,20 +223,20 @@ def validate_taxonomy(taxonomy, logger):
         elif isinstance(taxonomy, str):
             taxonomy = dataloading.parse_taxonomy_data(taxonomy)
     except:
-        logger.critical("Taxonomy validation failed")
+        warnings.warn("Taxonomy validation failed")
     try:
-        normalize_taxonomy(taxonomy, logger)
+        normalize_taxonomy(taxonomy)
     except:
-        logger.info(
+        warnings.warn(
             "An exception occurred when harmonizing taxonomy date (filling gaps, testing if all monophyletic)"
         )
     return taxonomy
 
 
-def validate_inputs(weights, rel_abundances, taxonomy, agg_levels, logger):
+def validate_inputs(weights, rel_abundances, taxonomy, agg_levels):
 
     weights = validate_weights(weights, agg_levels)
-    rel_abundances = validate_microbiome_data(rel_abundances, logger)
-    taxonomy = validate_taxonomy(taxonomy, logger)
+    rel_abundances = validate_microbiome_data(rel_abundances)
+    taxonomy = validate_taxonomy(taxonomy)
 
     return (weights, rel_abundances, taxonomy)

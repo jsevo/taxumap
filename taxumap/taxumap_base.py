@@ -8,7 +8,7 @@ import warnings
 
 import sys
 import warnings
-import logging
+# import logging
 from pathlib import Path
 
 import matplotlib as mpl
@@ -24,11 +24,11 @@ import taxumap.dataloading as dataloading
 from taxumap.tools import *
 from taxumap.input_validation import validate_inputs
 import taxumap.visualizations as viz
-from taxumap.custom_logging import setup_logger
+# from taxumap.custom_logging import setup_logger
 from taxumap._taxumap import TaxumapMixin, _save
 from taxumap.errors import throw_unknown_save_error, _name_value_error
 
-logger_taxumap = setup_logger("taxumap", verbose=False, debug=False)
+# logger_taxumap = setup_logger("taxumap", verbose=False, debug=False)
 
 mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams["ps.fonttype"] = 42
@@ -63,7 +63,7 @@ class Taxumap(TaxumapMixin):
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
         weights, rel_abundances, taxonomy = validate_inputs(
-            weights, microbiota_data, taxonomy, agg_levels, logger_taxumap
+            weights, microbiota_data, taxonomy, agg_levels
         )
         self.weights = weights
         self.rel_abundances = rel_abundances
@@ -83,7 +83,7 @@ class Taxumap(TaxumapMixin):
         """
 
         if "neigh" not in kwargs:
-            logger_taxumap.warning(
+            warnings.warn(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
             neigh = 120 if len(self.rel_abundances) > 120 else len(self.rel_abundances) - 1
@@ -91,14 +91,14 @@ class Taxumap(TaxumapMixin):
             neigh = kwargs["neigh"]
 
         if "min_dist" not in kwargs:
-            logger_taxumap.info("Setting min_dist to 0.05/sum(weights)")
+            warnings.warn("Setting min_dist to 0.05/sum(weights)")
             min_dist = 0.05 / np.sum(self.weights)
         else:
             min_dist = kwargs["min_dist"]
 
         if "epochs" not in kwargs:
             epochs = 5000 if neigh < 120 else (1000 if len(self.rel_abundances) < 5000 else 1000)
-            logger_taxumap.info("Setting epochs to %d" % epochs)
+            warnings.warn("Setting epochs to %d" % epochs)
 
         else:
             epochs = kwargs["epochs"]

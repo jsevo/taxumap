@@ -2,8 +2,9 @@
 # License: MIT
 import argparse
 import numpy as np
+import os
+import warnings
 
-from taxumap.custom_logging import setup_logger
 from taxumap.taxumap_base import Taxumap
 
 if __name__ == "__main__":
@@ -21,19 +22,19 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--neigh", help="Sets the neighbors parameter for UMAP")
     parser.add_argument("-b", "--min_dist", help="Sets the min_dist parameter for UMAP")
 
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        help="To get logging at info level and higher",
-        action="count",
-    )
+    # parser.add_argument(
+    #     "-v",
+    #     "--verbose",
+    #     help="To get logging at info level and higher",
+    #     action="count",
+    # )
 
-    parser.add_argument(
-        "-d",
-        "--debug",
-        help="To get logging at debug level and higher",
-        action="count",
-    )
+    # parser.add_argument(
+    #     "-d",
+    #     "--debug",
+    #     help="To get logging at debug level and higher",
+    #     action="count",
+    # )
 
     args = parser.parse_args()
 
@@ -58,7 +59,7 @@ if __name__ == "__main__":
         try:
             transform_inputs["neigh"] = int(args.neigh)
         except:
-            logger.warning("--neigh/-n must be an integer")
+            warnings.warn("--neigh/-n must be an integer")
 
     # for min_dist
     # TODO: Are there any other requirements for `min_dist`?
@@ -66,7 +67,7 @@ if __name__ == "__main__":
         try:
             transform_inputs["min_dist"] = float(args.min_dist)
         except:
-            logger.warning("--min_dist/-n must be a float")
+            warnings.warn("--min_dist/-n must be a float")
 
     if args.save is not None:
         if "True" in args.save:
@@ -110,4 +111,7 @@ if __name__ == "__main__":
 
     taxumap = Taxumap(**inputs)
     taxumap.transform_self(**transform_inputs)
-    taxumap.save_embedding(inputs["outdir"] + "embedding.csv")
+
+    if save:
+        taxumap.save_embedding(os.path.join(inputs["outdir"], "taxumap_embedding.csv"))
+        taxumap.scatter(save=True, outdir=inputs["outdir"])
