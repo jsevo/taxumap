@@ -47,9 +47,9 @@ Unless designated by the `-t` and `-m` flags, the data is expected to be within 
 ### Command line:
 
 ```bash
-python taxumap/run_taxumap.py -t taxonomy.csv -m microbiota_table.csv -n 15
+python taxumap/run_taxumap.py -t taxonomy.csv -m microbiota_table.csv
 ```
-Your embedding will be saved in your current folder, or you can provide a location with the `-o path/to/folder/` flag.
+Your embedding will be saved in your current folder, or you can provide a location with the `-o path/to/folder/` flag. Additionally, the flag `-n` should be folllowed by the number of unique patients in your sample (see flag information below for more details).
 
 
 ### Python:
@@ -86,6 +86,8 @@ tu.save_embedding('path/to/savedir')
 
 * An interactive Jupyter notebook file is provided in `examples/olin_example.ipynb`. ***This demos TaxUMAP on an example dataset we provide.*** See [below](#example_data) for more information.
 
+* Additionally, two other notebooks are provided to cover both adjusting the TaxUMAP default `agg_levels` and `weights` parameters (`examples/adjusting_taxumap_parameters.ipynb`), as well as cleaning the taxonomy table (`examples/cleaning_taxonomy_table.ipynb`).
+
 
 ---
 
@@ -95,11 +97,11 @@ tu.save_embedding('path/to/savedir')
 
 * `-t` or `--taxonomy`: filepath to your `taxonomy.csv` file
 * `-m` or `--microbiota`: filepath to your `microbiota_table.csv` file
-* `-n` or `--neigh`: number of patients
 
 ### Optional, but recommended
 
-* `-a` or `--agg_levels`: Which taxonomic levels to aggregate, in the form of a `/`-delimined string (e.g. `Phylum/Family`, `Family`, `Phylum/Order/Genus`)
+* `-n` or `--neigh`: number of unique microbiota hosts in datasafe, if applicable
+* `-a` or `--agg_levels`: Which taxonomic levels to aggregate, in the form of a `/`-delimined string (e.g. `Phylum/Family`, `Family`, `Phylum/Order/Genus`). Defaults to `Phylum/Family`.
 * `-w` or `--weights`: Weights to give to each taxonomic level defined in `--agg_levels`, in the form of a `/`-delimined string (e.g. `5/6`, `0.5/2`, `6/2/1`, etc). Defaults to 1 for each specified aggregation level.
 *
 
