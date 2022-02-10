@@ -77,8 +77,8 @@ tu.df_dominant_taxon
 # Visualize the embedding (will save to present working directory as "taxumap_scatterplot.pdf")
 tu.scatter(save=True)
 
-# Save the embedding (will save to present working directory as "taxumap_embedding.csv")
-tu.save_embedding('path/to/savedir')
+# Save the embedding (will save to present working directory as "taxumap_embedding.csv" if no parameter passed)
+tu.save_embedding('path/to/embedding.csv')
 
 ```
 
