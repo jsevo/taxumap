@@ -15,7 +15,7 @@ pip install -e .
 ## Data required
 Two tables are required: the **microbiota data** and a **taxonomy table**.
 
-The ***microbiota data file*** (e.g., `examples/example_data/microbiota_table.csv`) must have a column with sample indices labeled 'index_column'. The remaining columns are expected to be amplicon sequence variant (ASV) or operational taxonomic unit (OTU), i.e., the lowest level of taxonomy:
+The ***microbiota data file*** (e.g., `examples/example_data/microbiota_table.csv`) must have a column with sample indices labeled 'index_column'. The remaining columns are expected to be amplicon sequence variant (ASV) labels or operational taxonomic unit (OTU) labels, i.e., the lowest level of taxonomy:
 
 | index_column | ASV1 | ASV2 | ... | ASV500 |
 | :--- | :---: | :---: | :---: | :---: |
@@ -25,7 +25,7 @@ The ***microbiota data file*** (e.g., `examples/example_data/microbiota_table.cs
 |'sample3'|0.1| 0.4| ... | 0.5 |
 
 
-The ***taxonomy table*** (e.g., `examples/example_data/taxonomy.csv`) is expected to resolve higher taxonomic groups for each ASV/OTU in the microbiota table. The index of the taxonomy table should be **ASV/OTU labels**, while the columns of the taxonomy table should be higher taxonomic categories (e.g., kingdom, phylum, etc.). The columns must be ordered from left to right in decreasing taxonomic hierarchy, e.g.:
+The ***taxonomy table*** (e.g., `examples/example_data/taxonomy.csv`) is expected to resolve higher taxonomic groups for each ASV/OTU in the microbiota table. The **index** of the taxonomy table should be **ASV/OTU labels**, while the **columns** of the taxonomy table should be **higher taxonomic categories** (e.g., kingdom, phylum, etc.). The columns must be ordered from left to right in decreasing taxonomic hierarchy, e.g.:
 
 
 | ASV | Kingdom    | Phylum       | ...   | Genus    | Species |
