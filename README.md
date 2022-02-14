@@ -15,7 +15,7 @@ pip install -e .
 ## Data required
 Two tables are required: the **microbiota data** and a **taxonomy table**.
 
-The ***microbiota data file*** (`microbiota_table.csv`) must have a column with sample indices labeled 'index_column'. The remaining columns are expected to be the lowest level taxa (OTU/ASV/...):
+The ***microbiota data file*** (e.g., `examples/example_data/microbiota_table.csv`) must have a column with sample indices labeled 'index_column'. The remaining columns are expected to be amplicon sequence variant (ASV) or operational taxonomic unit (OTU), i.e., the lowest level of taxonomy:
 
 | index_column | ASV1 | ASV2 | ... | ASV500 |
 | :--- | :---: | :---: | :---: | :---: |
@@ -25,7 +25,7 @@ The ***microbiota data file*** (`microbiota_table.csv`) must have a column with 
 |'sample3'|0.1| 0.4| ... | 0.5 |
 
 
-The ***taxonomy table*** (`taxonomy.csv`) is expected to resolve higher taxonomic groups for the columns in the microbiota table. The columns of this table should contain taxonomic levels. Additionally, **the taxonomy table needs to contain a column labeled ASV or OTU**. Taxonomic levels should be ordered from left to right in decreasing taxonomic hierarchy, e.g.
+The ***taxonomy table*** (e.g., `examples/example_data/taxonomy.csv`) is expected to resolve higher taxonomic groups for each ASV/OTU in the microbiota table. The index of the taxonomy table should be **ASV/OTU labels**, while the columns of the taxonomy table should be higher taxonomic categories (e.g., kingdom, phylum, etc.). The columns must be ordered from left to right in decreasing taxonomic hierarchy, e.g.:
 
 
 | ASV | Kingdom    | Phylum       | ...   | Genus    | Species |
@@ -35,10 +35,8 @@ The ***taxonomy table*** (`taxonomy.csv`) is expected to resolve higher taxonomi
 | ... | ... | ... | ...   | ... |
 | 'ASV500' | 'Bacteria' | 'Verrucomicrobia' | ...  | 'Akkermansia' | 'muciniphila' |
 
-In the above tables, the ``''`` designates strings. **Any UNKNOWN taxonomic levels (e.g., 'unknown species') should be set to np.nan or the string 'nan'.** For more information on how to properly resolve unknown taxonomic levels for TaxUMAP, **please see the notebook `examples/cleaning_taxonomy_table.ipynb`**.  Finally, the taxonomy table should be *monophyletic*.
+In the above tables, the ``''`` designates strings. **Any UNKNOWN taxonomic levels (e.g., 'unknown species') should be set to np.nan or the string 'nan'.** For more information on how to properly resolve unknown taxonomic levels for TaxUMAP, **please see the notebook `examples/cleaning_taxonomy_table.ipynb`**. Finally, the taxonomy table should be *monophyletic*.
 
-
-Unless designated by the `-t` and `-m` flags, the data is expected to be within the `data/` folder. Results are written to the `taxumap/results/` folder.
 
 ---
 
@@ -49,7 +47,7 @@ Unless designated by the `-t` and `-m` flags, the data is expected to be within 
 ```bash
 python taxumap/run_taxumap.py -t taxonomy.csv -m microbiota_table.csv
 ```
-Your embedding will be saved in your current folder, or you can provide a location with the `-o path/to/folder/` flag. Additionally, the flag `-n` should be folllowed by the number of unique patients in your sample (see flag information below for more details).
+Your embedding will be saved in your current folder, or you can provide a location with the `-o path/to/folder/` flag. Additionally, for best results, the flag `-n` should be folllowed by the number of unique patients in your dataset (see flag information below for more details).
 
 
 ### Python:
@@ -84,7 +82,7 @@ tu.save_embedding('path/to/embedding.csv')
 
 ### Notebook:
 
-* An interactive Jupyter notebook file is provided in `examples/taxumap_example.ipynb`. ***This demos TaxUMAP on an example dataset we provide.*** See [below](#example_data) for more information.
+* An interactive Jupyter notebook file is provided in `examples/taxumap_example.ipynb`. ***This demonstrates TaxUMAP on an example dataset we provide.*** See [below](#example_data) for more information.
 
 * Additionally, two other notebooks are provided to cover both adjusting the TaxUMAP default `agg_levels` and `weights` parameters (`examples/adjusting_taxumap_parameters.ipynb`), as well as cleaning the taxonomy table (`examples/cleaning_taxonomy_table.ipynb`).
 
@@ -107,7 +105,7 @@ tu.save_embedding('path/to/embedding.csv')
 
 ### Optional, change default behavior
 
-* `-o` or `--outdir`: Where to save embedding. Defaults to `taxumap/results`.
+* `-o` or `--outdir`: Where to save embedding. Defaults to the present working directory.
 * `-s` or `--save`: Set to False to not save the embedding. Defaults to True.
 * `-b` or `--min_dist`: Change the `min_dist` parameter passed to the UMAP algorithm. See documentation [here](https://umap-learn.readthedocs.io/en/latest/parameters.html?highlight=min_dist#min-dist).
 
@@ -116,7 +114,6 @@ tu.save_embedding('path/to/embedding.csv')
 
  * To-do: Explain weights
  * To-do: Explain agg_levels
-
  * These concepts are illustrated in the notebook found at `examples/adjusting_taxumap_parameters.ipynb`.
 
 ---
@@ -135,7 +132,7 @@ We will be updating this package to include examples and adaptations needed for 
 
 ## Example notebook (with example data) <a name="example_data"></a>
 
-A dataset provided by Axel Olin works well for those wanting to try out the features of taxUMAP or to better understand how to format your own data properly.
+A dataset provided by Olin et al. works well for those wanting to try out the features of taxUMAP or to better understand how to format your own data properly.
 
 * [Link to original publication](https://pubmed.ncbi.nlm.nih.gov/30142345/)
 * [Link to the dataset](http://dx.doi.org/10.17632/ynhdrcxtcc.1)
