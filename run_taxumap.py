@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 import os
 import warnings
+import sys 
 
 from taxumap.taxumap_base import Taxumap
 
