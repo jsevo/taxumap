@@ -8,6 +8,7 @@ import warnings
 
 import sys
 import warnings
+
 # import logging
 from pathlib import Path
 
@@ -24,6 +25,7 @@ import taxumap.dataloading as dataloading
 from taxumap.tools import *
 from taxumap.input_validation import validate_inputs
 import taxumap.visualizations as viz
+
 # from taxumap.custom_logging import setup_logger
 from taxumap._taxumap import TaxumapMixin, _save
 from taxumap.errors import throw_unknown_save_error, _name_value_error
@@ -82,7 +84,7 @@ class Taxumap(TaxumapMixin):
             debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
         """
 
-        if "neigh" not in kwargs:
+        if ("neigh" not in kwargs) or (kwargs["neigh"] is None):
             warnings.warn(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
@@ -90,16 +92,15 @@ class Taxumap(TaxumapMixin):
         else:
             neigh = kwargs["neigh"]
 
-        if "min_dist" not in kwargs:
+        if ("min_dist" not in kwargs) or (kwargs["min_dist"] is None):
             warnings.warn("Setting min_dist to 0.05/sum(weights)")
             min_dist = 0.05 / np.sum(self.weights)
         else:
             min_dist = kwargs["min_dist"]
 
-        if "epochs" not in kwargs:
+        if ("epochs" not in kwargs) or (kwargs["epochs"] is None):
             epochs = 5000 if neigh < 120 else (1000 if len(self.rel_abundances) < 5000 else 1000)
             warnings.warn("Setting epochs to %d" % epochs)
-
         else:
             epochs = kwargs["epochs"]
 

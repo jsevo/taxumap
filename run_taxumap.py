@@ -60,6 +60,8 @@ if __name__ == "__main__":
             transform_inputs["neigh"] = int(args.neigh)
         except:
             warnings.warn("--neigh/-n must be an integer")
+    else:
+        transform_inputs["neigh"] = None
 
     # for min_dist
     # TODO: Are there any other requirements for `min_dist`?
@@ -68,6 +70,8 @@ if __name__ == "__main__":
             transform_inputs["min_dist"] = float(args.min_dist)
         except:
             warnings.warn("--min_dist/-n must be a float")
+    else:
+        transform_inputs["min_dist"] = None
 
     if args.save is not None:
         if "True" in args.save:
@@ -90,21 +94,20 @@ if __name__ == "__main__":
     if args.taxonomy is not None:
         inputs["taxonomy"] = args.taxonomy
     else:
-        inputs["taxonomy"] = "./data/taxonomy.csv"
+        sys.exit("Please specify the location of your taxonomy table using the -t flag.")
 
     # rel_abundances
     if args.microbiota_data is not None:
         inputs["microbiota_data"] = args.microbiota_data
     else:
-        inputs["microbiota_data"] = "./data/microbiota_table.csv"
+        sys.exit("Please specify the location of your microbiota data table using the -m flag.")
 
     if args.outdir is not None:
         outpath = args.outdir
         if outpath[-1] != "/":
             outpath = outpath + "/"
-        inputs["outdir"] = outpath
     else:
-        inputs["outdir"] = "./"
+        outpath = "./"
 
     print(inputs)
     print(transform_inputs)
@@ -113,5 +116,5 @@ if __name__ == "__main__":
     taxumap.transform_self(**transform_inputs)
 
     if save:
-        taxumap.save_embedding(os.path.join(inputs["outdir"], "taxumap_embedding.csv"))
-        taxumap.scatter(save=True, outdir=inputs["outdir"])
+        taxumap.save_embedding(os.path.join(outpath, "taxumap_embedding.csv"))
+        taxumap.scatter(save=True, outdir=outpath)
