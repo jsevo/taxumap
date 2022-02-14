@@ -114,8 +114,8 @@ taxumap/todo.md
 # manuscript notebooks are published separately
 taxumap-manuscript-notebooks/*
 
-!taxumap/examples/*/*.pdf
-!taxumap/examples/*/*.csv
+!examples/*/*.pdf
+!examples/*/*.csv
 taxumap/archived/common_errors.md
 taxumap/archived/custom_logging.py
 taxumap/archived/notebooks/r_analyses_phyloumap/.RData
