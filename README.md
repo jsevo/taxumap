@@ -12,6 +12,13 @@ git clone https://github.com/jsevo/taxumap.git
 pip install -e .
 ```
 
+## Quickstart: Notebook Example
+
+* An interactive Jupyter notebook file is provided in `examples/taxumap_example.ipynb`. ***This demonstrates TaxUMAP on an example dataset we provide.*** See [below](#example_data) for more information.
+
+* Additionally, two other notebooks are provided to cover both adjusting the TaxUMAP default `agg_levels` and `weights` parameters (`examples/adjusting_taxumap_parameters.ipynb`), as well as cleaning the taxonomy table (`examples/cleaning_taxonomy_table.ipynb`).
+
+
 ## Data required
 Two tables are required: the **microbiota data** and a **taxonomy table**.
 
@@ -32,7 +39,7 @@ The ***taxonomy table*** (e.g., `examples/example_data/taxonomy.csv`) is expecte
 | :---: | :---:       | :---:        | :---: | :---:  |:---:  |
 | 'ASV1' | 'Bacteria' | 'Firmicutes' | ...   | 'Staphylococcus' | 'aureus' |
 | 'ASV2' | 'Bacteria' | 'Bacillota' | ...   | '[Ruminococcus]' | 'gnavus' |
-| ... | ... | ... | ...   | ... |
+| ... | ... | ... | ...   | ... | ... |
 | 'ASV500' | 'Bacteria' | 'Verrucomicrobia' | ...  | 'Akkermansia' | 'muciniphila' |
 
 In the above tables, the ``''`` designates strings. **Any UNKNOWN taxonomic levels (e.g., 'unknown species') should be set to np.nan or the string 'nan'.** For more information on how to properly resolve unknown taxonomic levels for TaxUMAP, **please see the notebook `examples/cleaning_taxonomy_table.ipynb`**. Finally, the taxonomy table should be *monophyletic*.
@@ -40,7 +47,7 @@ In the above tables, the ``''`` designates strings. **Any UNKNOWN taxonomic leve
 
 ---
 
-## Quickstart
+## Usage
 
 ### Command line:
 
@@ -80,16 +87,9 @@ tu.save_embedding('path/to/embedding.csv')
 
 ```
 
-### Notebook:
-
-* An interactive Jupyter notebook file is provided in `examples/taxumap_example.ipynb`. ***This demonstrates TaxUMAP on an example dataset we provide.*** See [below](#example_data) for more information.
-
-* Additionally, two other notebooks are provided to cover both adjusting the TaxUMAP default `agg_levels` and `weights` parameters (`examples/adjusting_taxumap_parameters.ipynb`), as well as cleaning the taxonomy table (`examples/cleaning_taxonomy_table.ipynb`).
-
-
 ---
 
-## Flags for `run_taxumap.py`
+## Flags for Command-line Interface (CLI)
 
 ### Required
 
@@ -98,10 +98,10 @@ tu.save_embedding('path/to/embedding.csv')
 
 ### Optional, but recommended
 
-* `-n` or `--neigh`: number of unique microbiota hosts in datasafe, if applicable
 * `-a` or `--agg_levels`: Which taxonomic levels to aggregate, in the form of a `/`-delimined string (e.g. `Phylum/Family`, `Family`, `Phylum/Order/Genus`). Defaults to `Phylum/Family`.
 * `-w` or `--weights`: Weights to give to each taxonomic level defined in `--agg_levels`, in the form of a `/`-delimined string (e.g. `5/6`, `0.5/2`, `6/2/1`, etc). Defaults to 1 for each specified aggregation level.
-*
+* `-n` or `--neigh`: Change the `n_neighbors` parameter passed to the UMAP algorithm. See documentation [here](https://umap-learn.readthedocs.io/en/latest/parameters.html?highlight=n_neighbors#n-neighbors).
+
 
 ### Optional, change default behavior
 

@@ -60,6 +60,7 @@ class Taxumap(TaxumapMixin):
             fpx (str, optional): Filepath to the rel_abundances dataframe, if saved on disk. Defaults to None.
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
         """
+
         self.random_state = random_state
         # self._is_transformed = False
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))

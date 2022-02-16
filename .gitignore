@@ -123,8 +123,8 @@ taxumap/archived/notebooks/r_analyses_phyloumap/.Rhistory
 taxumap/archived/notebooks/r_analyses_phyloumap/r_analyses_phyloumap.Rproj
 taxumap/archived/notebooks/r_analyses_phyloumap/STAPH_mixed_Effects_subject_linear_time.R
 taxumap/archived/todo.md
-taxumap/examples/Cleaning the example data.ipynb
-taxumap/examples/olin_etal.ipynb
-taxumap/examples/olin_qc.ipynb
-taxumap/examples/test.ipynb
-taxumap/examples/test_qc
+examples/Cleaning the example data.ipynb
+examples/olin_etal.ipynb
+examples/olin_qc.ipynb
+examples/test.ipynb
+examples/test_qc
