@@ -116,6 +116,60 @@ def fill_tax_table(tax):
     Output:
         new_tax (pd.DataFrame): Properly-filled taxonomy dataframe
     """
+
+    if len(tax.index) != len(tax.index.unique()):
+        print(
+            "Repeated OTUs/ASVs in the taxonomy index. Check to make sure there is only _one_ entry per OTU in taxonomy table."
+        )
+
+    table_name = tax.index.name  # Important - don't remove this and its corresponding stpe below.
+
+    container = []
+    for otu in tax.index:
+
+        series = tax.loc[otu]
+
+        # If there are no NaNs in the OTU, don't do anything.
+        if (~series.isna()).all():
+            container.append(series)
+
+        # However, if NaNs do exist, fill the taxonomy "from-the-left"
+        else:
+
+            # First, initialize the first "last_not_nan" in case the highest level is missing.
+            last_not_nan_index = series.index[0]
+            last_not_nan_value = f"unk_{last_not_nan_index}"
+
+            for i in range(len(series)):
+
+                # If the label is nan, fill it
+                if series.isna().iloc[i]:
+                    series.iloc[
+                        i
+                    ] = f"unk_{series.index[i]}_of_{last_not_nan_index}_{last_not_nan_value}__{series.name}"
+
+                # Else, keep that non-nan value in case the next label is nan
+                else:
+                    last_not_nan_index = series.index[i]
+                    last_not_nan_value = series.iloc[i]
+
+            container.append(series)
+
+    new_tax = pd.concat(container, axis=1).T
+    new_tax.index.name = table_name
+
+    return new_tax
+
+
+def _fill_tax_table_old(tax):
+    """Fills missing values in the taxonomy table. Will recognize only 'np.nan' data types as empty values.
+
+    Args:
+        tax (pd.DataFrame): Dataframe with index of ASV/OTU and columns of left -> right increasing specificity in taxonomy (e.g., Kingdom -> Species)
+
+    Output:
+        new_tax (pd.DataFrame): Properly-filled taxonomy dataframe
+    """
     if len(tax.index) != len(tax.index.unique()):
         print(
             "Repeated OTUs/ASVs in the taxonomy index. Check to make sure there is only _one_ entry per OTU in taxonomy table."
@@ -166,7 +220,6 @@ def fill_tax_table(tax):
                     ] = f"unk_{series.index[i]}_of_{series.index[last_not_nan]}_{series.iloc[last_not_nan]}"
 
             # Add in the ASV/OTU name to the end of every unknown
-
             for i in range(first_nan, len(series)):
                 series.iloc[i] = f"{series.iloc[i]}__{otu}"
 
