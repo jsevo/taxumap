@@ -12,9 +12,9 @@ import pandas as pd
 import scipy.spatial.distance as ssd
 from sklearn.preprocessing import MinMaxScaler
 
-from taxumap.custom_logging import setup_logger
+# from taxumap.custom_logging import setup_logger
 
-logger_tools = setup_logger("tools", verbose=False, debug=False)
+# logger_tools = setup_logger("tools", verbose=False, debug=False)
 
 
 def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights, low_precision = False):
@@ -43,7 +43,7 @@ def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights, low_
     Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
 
     for agg_level, weight in zip(agg_levels, weights):
-        logger_tools.info("aggregating on %s" % agg_level)
+        warnings.warn("aggregating on %s" % agg_level)
         Xagg = aggregate_at_taxlevel(_X, taxonomy, agg_level)
         Xagg = ssd.cdist(Xagg, Xagg, distance_metric)
         Xagg = pd.DataFrame(Xagg, index=_X.index, columns=_X.index)
@@ -74,7 +74,7 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
     Params
     ===============
     X: ASV table
-    scaler: one of the sklearn.preprocessing scalers, defaults to MinMaxScaler 
+    scaler: one of the sklearn.preprocessing scalers, defaults to MinMaxScaler
 
     Returns
     ===============
@@ -85,9 +85,7 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
 
     if remove_rare_asv_level > 0:
         # if an ASV has never reached at least `remove_rare_asv_level` threshold, ignore.
-        X_consider = X_stats.applymap(lambda v: v > remove_rare_asv_level).apply(
-            np.any, axis=1
-        )
+        X_consider = X_stats.applymap(lambda v: v > remove_rare_asv_level).apply(np.any, axis=1)
         X_consider = X_consider[X_consider.values].index
     else:
         X_consider = X.columns
@@ -95,6 +93,3 @@ def scale(X, scaler=MinMaxScaler(), remove_rare_asv_level=0):
     Xscaled = scaler.fit_transform(X[X_consider])
 
     return Xscaled
-
-
-

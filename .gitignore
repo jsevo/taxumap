@@ -107,10 +107,27 @@ ENV/
 
 # For VS Code settings
 .vscode
-/notebooks/*
 *.pickle
 taxumap/todo.md
 *.json
 
 # manuscript notebooks are published separately
 taxumap-manuscript-notebooks/*
+
+!examples/*/*.pdf
+!examples/*/*.csv
+taxumap/archived/common_errors.md
+taxumap/archived/custom_logging.py
+taxumap/archived/notebooks/r_analyses_phyloumap/.RData
+taxumap/archived/notebooks/r_analyses_phyloumap/.Rhistory
+taxumap/archived/notebooks/r_analyses_phyloumap/r_analyses_phyloumap.Rproj
+taxumap/archived/notebooks/r_analyses_phyloumap/STAPH_mixed_Effects_subject_linear_time.R
+taxumap/archived/todo.md
+taxumap/archived/test_qc
+taxumap/archived/test.ipynb
+taxumap/archived/olin_qc.ipynb
+taxumap/archived/olin_etal.ipynb
+taxumap/archived/Cleaning the example data.ipynb
+
+
+personal/*

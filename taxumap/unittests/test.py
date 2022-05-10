@@ -35,9 +35,7 @@ class TestTaxumap(unittest.TestCase):
             try:
                 os.rmdir(unique_folder_name)
             except OSError:
-                logger.critical(
-                    "Pease delete the temp directory in taxumap/taxumap/unittests"
-                )
+                warnings.warn("Pease delete the temp directory in taxumap/taxumap/unittests")
 
     @classmethod
     def tearDownTest(cls):
@@ -48,15 +46,21 @@ class TestTaxumap(unittest.TestCase):
 
     def setUp(self):
         self.broke_name = t.Taxumap(
-            fpt="taxonomy.csv", fpx="microbiota_table.csv", name=3465,
+            fpt="taxonomy.csv",
+            fpx="microbiota_table.csv",
+            name=3465,
         )
 
         self.t1 = t.Taxumap(
-            fpt="taxonomy.csv", fpx="microbiota_table.csv", name="test1",
+            fpt="taxonomy.csv",
+            fpx="microbiota_table.csv",
+            name="test1",
         )
 
         self.t2 = t.Taxumap(
-            fpt="taxonomy.csv", fpx="microbiota_table.csv", name="test2_transformed",
+            fpt="taxonomy.csv",
+            fpx="microbiota_table.csv",
+            name="test2_transformed",
         )
 
         self.t2.transform_self()
