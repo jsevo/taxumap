@@ -26,6 +26,7 @@ def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights, low_
         agg_levels (list of str): Taxons to aggregate
         distance_metric (str): String to pass to ssd.cdist()
         weights (list of int): Weights of the non-ASV/OTU taxons
+        low_precision(float): default False, set threshold for minimum mean relative abundances below which columns are ignored
 
     Returns:
         pandas df: distance table, row and columns are sample ids
