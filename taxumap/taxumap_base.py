@@ -107,6 +107,11 @@ class Taxumap:
         else:
             epochs = kwargs["epochs"]
 
+        if "low_precision" not in kwargs:
+            low_precision=False
+        else:
+            low_precision=np.float(kwargs["low_precision"])
+
         # Shouldn't need `try...except` because any Taxumap object should have proper attributes
         Xagg = tax_agg(
             self.rel_abundances,
@@ -114,6 +119,7 @@ class Taxumap:
             self.agg_levels,
             distance_metric,
             self.weights,
+            low_precision=low_precision
         )
 
         rs = np.random.RandomState(seed=self.random_state)

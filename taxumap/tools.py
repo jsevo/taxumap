@@ -17,7 +17,7 @@ from taxumap.custom_logging import setup_logger
 logger_tools = setup_logger("tools", verbose=False, debug=False)
 
 
-def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
+def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights, low_precision = False):
     """Generates a distance matrix aggregated on each designated taxon
 
     Args:
@@ -34,6 +34,11 @@ def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
     _X = rel_abundances.copy()
     # remove columns that are always zero
     _X = _X.loc[:, (_X != 0).any(axis=0)]
+    if low_precision:
+        _threshold = low_precision*_X.shape[0]
+        _Xs = _Xs.sum(axis=0)>_threshold
+        _X = _X.loc[:,_Xs.values]
+    # do a PCA first? memoize?
     Xdist = ssd.cdist(_X, _X, distance_metric)
     Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)
 
@@ -48,7 +53,6 @@ def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights):
 
     return Xdist
 
-
 def aggregate_at_taxlevel(X, tax, level):
     """Helper function. For a given taxonomic level, aggregate relative abundances by summing all members of corresponding taxon."""
     _X_agg = X.copy()
@@ -59,7 +63,8 @@ def aggregate_at_taxlevel(X, tax, level):
             _X_agg.sum(axis=1), 1.0
         ), "At taxonomic aggregation level %s, rows do not sum to 1."
     except AssertionError:
-        print("moving on anyway")
+        print("At taxonomic aggregation level %s, rows do not sum to 1. Moving on anyway")
+
 
     return _X_agg
 
