@@ -239,16 +239,30 @@ def ensure_monophyletic_for_hct_dataset(taxonomy):
         "Genus",
     ] = (
         taxonomy.loc[
-            taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"),
+            taxonomy.Genus.str.contains("metagenome")
+            & ~taxonomy.Genus.str.contains("ASV"),
             "Genus",
         ]
         + "___"
         + taxonomy.loc[
-            taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"),
+            taxonomy.Genus.str.contains("metagenome")
+            & ~taxonomy.Genus.str.contains("ASV"),
             "Genus",
         ].index
     )
+
+    taxonomy.loc[taxonomy.Family == "Family XI", "Family"] = (
+        taxonomy.loc[taxonomy.Family == "Family XI", "Family"]
+        + "_order_"
+        + taxonomy.loc[taxonomy.Family == "Family XI", "Order"]
+    )
+    taxonomy.loc[taxonomy.Family == "Family gut metagenome", "Family"] = (
+        taxonomy.loc[taxonomy.Family == "Family gut metagenome", "Family"]
+        + taxonomy.loc[taxonomy.Family == "Family gut metagenome"].index
+    )
+
     return taxonomy
+
 
 
 def normalize_taxonomy(taxonomy):
