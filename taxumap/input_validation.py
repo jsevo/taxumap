@@ -234,7 +234,7 @@ def _fill_tax_table_old(tax):
 
 
 def ensure_monophyletic_for_hct_dataset(taxonomy):
-    taxonomy = taxonomy.loc[
+    taxonomy.loc[
         taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"),
         "Genus",
     ] = (
