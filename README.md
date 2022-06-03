@@ -54,7 +54,7 @@ In the above tables, the ``''`` designates strings. **Any UNKNOWN taxonomic leve
 ```bash
 python taxumap/run_taxumap.py -t taxonomy.csv -m microbiota_table.csv
 ```
-Your embedding will be saved in your current folder, or you can provide a location with the `-o path/to/folder/` flag. Additionally, for best results, the flag `-n` should be folllowed by the number of unique patients in your dataset (see flag information below for more details).
+The embedding will be saved in the current working folder, or to a location with the `-o path/to/folder/` flag. Additionally, for best results, the flag `-n` should be folllowed by the number of unique patients in your dataset (see **Optional** flag information below for more details).
 
 
 ### Python:
@@ -110,29 +110,11 @@ tu.save_embedding('path/to/embedding.csv')
 * `-b` or `--min_dist`: Change the `min_dist` parameter passed to the UMAP algorithm. See documentation [here](https://umap-learn.readthedocs.io/en/latest/parameters.html?highlight=min_dist#min-dist).
 
 
-## Documentation
-
- * To-do: Explain weights
- * To-do: Explain agg_levels
- * These concepts are illustrated in the notebook found at `examples/adjusting_taxumap_parameters.ipynb`.
-
----
-
-## Details
-
-## Roadmap
-
-[1] As presented here, taxUMAP is used for visualizing large microbiota datasets. However, it has much broader applications to improving upon UMAP by informing the algorithm of the hierarchical structure of data.
-
-We will be updating this package to include examples and adaptations needed for such use cases.
-
-[2] We will be updating general user issues. Please submit a GitHub issue for any comments, questions, concerns.
-
 ---
 
 ## Example notebook (with example data) <a name="example_data"></a>
 
-A dataset provided by Olin et al. works well for those wanting to try out the features of taxUMAP or to better understand how to format your own data properly.
+A dataset provided by Olin et al. can be used to try out  features of TaxUMAP and how to format new data properly.
 
 * [Link to original publication](https://pubmed.ncbi.nlm.nih.gov/30142345/)
 * [Link to the dataset](http://dx.doi.org/10.17632/ynhdrcxtcc.1)
@@ -143,7 +125,7 @@ Publication
 Dataset
 > Olin, Axel (2018), “Stereotypic Immune System Development in Newborn Children”, Mendeley Data, v1
 
-Solely for convenience, I am providing in the `taxumap/examples/example_data` directory a pre-cleaned version of this dataset, as allowed under the `CC BY 4.0` license. I also provide a Jupyter Notebook to see how the data was cleaned.
+For convenience, we are providing in the `taxumap/examples/example_data` directory a pre-cleaned version of this dataset, as allowed under the `CC BY 4.0` license. An accompanying Jupyter Notebook is provided to demonstrated how the data was cleaned.
 
 
 
