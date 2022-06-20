@@ -129,6 +129,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"], idx_dtype=str):
 
 
 def check_if_compositional(X, name=""):
+    """Checks if all rows sum to 1."""
     if not np.allclose(X.sum(axis=1), 1):
         warnings.warn(
             "Rows in the {} dataframe do not sum to 1. Is this intentional?".format(name)
