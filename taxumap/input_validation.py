@@ -234,21 +234,44 @@ def _fill_tax_table_old(tax):
 
 
 def ensure_monophyletic_for_hct_dataset(taxonomy):
-    taxonomy = taxonomy.loc[
+    taxonomy.loc[
         taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"),
         "Genus",
     ] = (
         taxonomy.loc[
-            taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"),
+            taxonomy.Genus.str.contains("metagenome")
+            & ~taxonomy.Genus.str.contains("ASV"),
             "Genus",
         ]
         + "___"
         + taxonomy.loc[
-            taxonomy.Genus.str.contains("metagenome") & ~taxonomy.Genus.str.contains("ASV"),
+            taxonomy.Genus.str.contains("metagenome")
+            & ~taxonomy.Genus.str.contains("ASV"),
             "Genus",
         ].index
     )
+
+    taxonomy.loc[taxonomy.Family == "Family XI", "Family"] = (
+        taxonomy.loc[taxonomy.Family == "Family XI", "Family"]
+        + "_order_"
+        + taxonomy.loc[taxonomy.Family == "Family XI", "Order"]
+    )
+    taxonomy.loc[taxonomy.Family == "Family gut metagenome", "Family"] = (
+        taxonomy.loc[taxonomy.Family == "Family gut metagenome", "Family"]
+        + taxonomy.loc[taxonomy.Family == "Family gut metagenome"].index
+    )
+
     return taxonomy
+
+def test_taxonomy_is_monophyletic(taxonomy):
+    for (p,c) in zip(taxonomy.columns[0:-1],taxonomy.columns[1::]):
+        gc = taxonomy[[p,c]].groupby(c).agg(lambda x: len(np.unique(x))<=1)
+        if np.all(gc.values):
+            pass
+        else:
+            print(p,c)
+            print('not monophyletic')
+    
 
 
 def normalize_taxonomy(taxonomy):
@@ -259,7 +282,7 @@ def normalize_taxonomy(taxonomy):
     try:
         taxonomy = ensure_monophyletic_for_hct_dataset(taxonomy)
     except:
-        warnings.warn("ensure_monophyletic_for_hct_dataset failed. likely not hct data set.")
+        warnings.warn("ensure_monophyletic_for_hct_dataset failed. likely not hct data set.") 
     return taxonomy
 
 
@@ -283,6 +306,10 @@ def validate_taxonomy(taxonomy):
         warnings.warn(
             "An exception occurred when harmonizing taxonomy date (filling gaps, testing if all monophyletic)"
         )
+    try:
+        taxonomy = test_taxonomy_is_monophyletic(taxonomy)
+    except:
+        warnings.warn("Review taxonomy table, it appears not to be monophyletic.")  
     return taxonomy
 
 
