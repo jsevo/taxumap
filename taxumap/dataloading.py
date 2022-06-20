@@ -1,34 +1,25 @@
-import os
-
-#!/usr/bin/env python
 import sys
 import warnings
 from pathlib import Path
-import logging
 
 import numpy as np
 import pandas as pd
-import scipy.spatial.distance as ssd
-from sklearn.preprocessing import MinMaxScaler
 
 # from taxumap.custom_logging import setup_logger
 # logger_dataloading = setup_logger("dataloading")
 
 
 def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
-    """Attempts to load a `microbiota_table.csv` file from specified file location
+    """Attempt to load a `microbiota_table.csv` file from specified file location.
 
     Args:
         fp (str): Path to the microbiota_table.csv file
         idx_col (str, optional): The column in microbiota_table.csv to be used as the index. Should be either ASV/OTU. Defaults to "index_column".
         idx_dtype (dtype, optional): Data type for the index. For consistency, str is a good choice. Defaults to str.
-
     Returns:
         Pandas df: a properly-formatted rel_abundances df
     """
-
     fp = Path(fp)
-
     # There's probably a better way of doing this test -
     # fp.resolve(strict=True) will error if file does not exist?
     try:
