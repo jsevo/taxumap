@@ -55,7 +55,7 @@ def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights, low_
     return Xdist
 
 def aggregate_at_taxlevel(X, tax, level):
-    """Helper function. For a given taxonomic level, aggregate relative abundances by summing all members of corresponding taxon."""
+    """Sum relative abundances of all members of a taxon at a given taxonomic level"""
     _X_agg = X.copy()
     _X_agg.columns = [tax.loc[x][level] for x in _X_agg.columns]
     _X_agg = _X_agg.groupby(_X_agg.columns, axis=1).sum()

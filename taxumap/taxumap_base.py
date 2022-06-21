@@ -16,14 +16,14 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from umap import UMAP
 
-from taxumap.tools import *
+from taxumap.tools import tax_agg, aggregate_at_taxlevel, scale
 from taxumap.input_validation import validate_inputs
 
 mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams["ps.fonttype"] = 42
 
 
-class Taxumap(TaxumapMixin):
+class Taxumap():
     """Taxumap object for running TaxUMAP algorithm"""
     def __init__(
         self,
@@ -39,7 +39,7 @@ class Taxumap(TaxumapMixin):
         Args:
             agg_levels (list, optional): Determines which taxonomic levels to aggregate on. See taxUMAP documentation. Defaults to ["Phylum", "Family"].
             weights (list of int, optional): Determines the weights of each of the agg_levels. Length of this list must match length of agg_levels. Defaults to None.
-            rel_abundances (dataframe, optional): Compositional data (relative counts) of abundance of ASV/OTU. Defaults to None.
+            microbiota_data (dataframe, optional): Compositional data (relative counts) of abundance of ASV/OTU. Defaults to None.
             taxonomy (dataframe, optional): Dataframe with index of ASV/OTU and columns representing descending taxonomic levels. Defaults to None.
             fpt (str, optional): Filepath to the rel_abundances meta dataframe, if saved on disk. Defaults to None.
             fpx (str, optional): Filepath to the rel_abundances dataframe, if saved on disk. Defaults to None.
@@ -49,11 +49,11 @@ class Taxumap(TaxumapMixin):
         # self._is_transformed = False
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
-        weights, rel_abundances, taxonomy = validate_inputs(
+        weights, microbiota_data, taxonomy = validate_inputs(
             weights, microbiota_data, taxonomy, agg_levels
         )
         self.weights = weights
-        self.rel_abundances = rel_abundances
+        self.microbiota_data = microbiota_data
         self.taxonomy = taxonomy
 
         # Set name attribute
@@ -65,7 +65,7 @@ class Taxumap(TaxumapMixin):
     def transform_self(self, scale=False, debug=False, distance_metric="braycurtis", **kwargs):
         """Run the taxUMAP transformation.
 
-        Requires rel_abundances and taxonomy dataframes.
+        Requires microbiota_data and taxonomy dataframes.
 
         Args:
             debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
@@ -74,7 +74,7 @@ class Taxumap(TaxumapMixin):
             warnings.warn(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
-            neigh = 120 if len(self.rel_abundances) > 120 else len(self.rel_abundances) - 1
+            neigh = 120 if len(self.microbiota_data) > 120 else len(self.microbiota_data) - 1
         else:
             neigh = kwargs["neigh"]
 
@@ -85,7 +85,7 @@ class Taxumap(TaxumapMixin):
             min_dist = kwargs["min_dist"]
 
         if ("epochs" not in kwargs) or (kwargs["epochs"] is None):
-            epochs = 5000 if neigh < 120 else (1000 if len(self.rel_abundances) < 5000 else 1000)
+            epochs = 5000 if neigh < 120 else (1000 if len(self.microbiota_data) < 5000 else 1000)
             warnings.warn("Setting epochs to %d" % epochs)
         else:
             epochs = kwargs["epochs"]
@@ -97,7 +97,7 @@ class Taxumap(TaxumapMixin):
 
         # Shouldn't need `try...except` because any Taxumap object should have proper attributes
         Xagg = tax_agg(
-            self.rel_abundances,
+            self.microbiota_data,
             self.taxonomy,
             self.agg_levels,
             distance_metric,
@@ -148,7 +148,7 @@ class Taxumap(TaxumapMixin):
         # DataFrame where each row is the maximum taxon corresponding to the
         # shared index in the column index_column
         df_dom_tax_per_sample = (
-            pd.DataFrame(self.rel_abundances.idxmax(axis="columns"), columns=["max_tax"])
+            pd.DataFrame(self.microbiota_data.idxmax(axis="columns"), columns=["max_tax"])
             .reset_index()
             .set_index("max_tax")
         )

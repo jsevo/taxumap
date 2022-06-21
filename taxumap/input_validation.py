@@ -16,39 +16,39 @@ def validate_weights(weights, agg_levels):
     return weights
 
 
-def validate_microbiome_data_frame(rel_abundances):
-    # Validate the rel_abundances dataset
+def validate_microbiome_data_frame(microbiota_data):
+    # Validate the microbiota_data dataset
     try:
-        rel_abundances.set_index("index_column", inplace=True)
+        microbiota_data.set_index("index_column", inplace=True)
     except KeyError:
         # if it can't set the index to 'index_column', maybe it's already set
         # let's check to see if that is not the case
-        if rel_abundances.index.name != "index_column":
+        if microbiota_data.index.name != "index_column":
             raise ValueError(
-                "Your rel_abundances df needs to contain 'index_column' containing sample identifiers of each row containing relative OTU/ASV abundances"
+                "Your microbiota_data df needs to contain 'index_column' containing sample identifiers of each row containing relative OTU/ASV abundances"
             )
 
     # lastly, quickly check if the data is compositional.
     dataloading.check_if_compositional(
-        rel_abundances,
-        name="locally-supplied microbiota (rel_abundances)",
+        microbiota_data,
+        name="locally-supplied microbiota (microbiota_data)",
     )
 
-    return rel_abundances
+    return microbiota_data
 
 
-def validate_microbiome_data(rel_abundances):
-    if isinstance(rel_abundances, pd.DataFrame):
-        warnings.warn("Recognized `rel_abundances` parameter as Pandas DataFrame")
-    elif isinstance(rel_abundances, str):
-        rel_abundances = dataloading.parse_microbiome_data(rel_abundances)
+def validate_microbiome_data(microbiota_data):
+    if isinstance(microbiota_data, pd.DataFrame):
+        warnings.warn("Recognized `microbiota_data` parameter as Pandas DataFrame")
+    elif isinstance(microbiota_data, str):
+        microbiota_data = dataloading.parse_microbiome_data(microbiota_data)
     else:
         raise ValueError(
             "The microbiome data should be provided as either a pd.DataFrame or path to csv file"
         )
-    rel_abundances = validate_microbiome_data_frame(rel_abundances)
+    microbiota_data = validate_microbiome_data_frame(microbiota_data)
 
-    return rel_abundances
+    return microbiota_data
 
 
 # def fill_taxonomy_table(tax):
@@ -313,10 +313,10 @@ def validate_taxonomy(taxonomy):
     return taxonomy
 
 
-def validate_inputs(weights, rel_abundances, taxonomy, agg_levels):
+def validate_inputs(weights, microbiota_data, taxonomy, agg_levels):
 
     weights = validate_weights(weights, agg_levels)
-    rel_abundances = validate_microbiome_data(rel_abundances)
+    microbiota_data = validate_microbiome_data(microbiota_data)
     taxonomy = validate_taxonomy(taxonomy)
 
-    return (weights, rel_abundances, taxonomy)
+    return (weights, microbiota_data, taxonomy)

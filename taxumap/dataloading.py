@@ -17,7 +17,7 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
         idx_col (str, optional): The column in microbiota_table.csv to be used as the index. Should be either ASV/OTU. Defaults to "index_column".
         idx_dtype (dtype, optional): Data type for the index. For consistency, str is a good choice. Defaults to str.
     Returns:
-        Pandas df: a properly-formatted rel_abundances df
+        Pandas df: a properly-formatted microbiota_data df
     """
     fp = Path(fp)
     # There's probably a better way of doing this test -
@@ -41,7 +41,7 @@ def parse_microbiome_data(fp, idx_col="index_column", idx_dtype=str):
             X.set_index(idx_col, inplace=True)
             X = X.astype(np.float64)
 
-            check_if_compositional(X, name="microbiota (rel_abundances)")
+            check_if_compositional(X, name="microbiota (microbiota_data)")
 
             return X.fillna(0)
 
