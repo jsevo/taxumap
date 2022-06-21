@@ -137,6 +137,7 @@ def check_if_compositional(X, name=""):
 
 
 def check_tax_is_consistent(df):
+    """Checks if taxonomy tbl has nans, datatypes; warns if non str found."""
     if np.any(df.isna()):
         warnings.warn(
             "Missing values (NaN) found for some taxonomy levels, you should consider filling with higher taxonomic level names. Please consult the documentation for best way to move forward."
