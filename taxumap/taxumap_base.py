@@ -5,32 +5,19 @@ __author__ = ["Jonas Schluter", "Grant Hussey"]
 __copyright__ = "Copyright 2020, MIT License"
 
 import warnings
-
-import sys
-import warnings
-
+import os
 # import logging
-from pathlib import Path
 
 import matplotlib as mpl
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
 
 from matplotlib import pyplot as plt
 from umap import UMAP
 
-import taxumap.dataloading as dataloading
 from taxumap.tools import *
 from taxumap.input_validation import validate_inputs
-import taxumap.visualizations as viz
-
-# from taxumap.custom_logging import setup_logger
-from taxumap._taxumap import TaxumapMixin, _save
-from taxumap.errors import throw_unknown_save_error, _name_value_error
-
-# logger_taxumap = setup_logger("taxumap", verbose=False, debug=False)
 
 mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams["ps.fonttype"] = 42
@@ -38,7 +25,6 @@ mpl.rcParams["ps.fonttype"] = 42
 
 class Taxumap(TaxumapMixin):
     """Taxumap object for running TaxUMAP algorithm"""
-
     def __init__(
         self,
         agg_levels=["Phylum", "Family"],
@@ -48,8 +34,7 @@ class Taxumap(TaxumapMixin):
         name=None,
         random_state=42,
     ):
-
-        """Constructor method for the Taxumap object
+        """Instantiate the Taxumap object.
 
         Args:
             agg_levels (list, optional): Determines which taxonomic levels to aggregate on. See taxUMAP documentation. Defaults to ["Phylum", "Family"].
@@ -60,7 +45,6 @@ class Taxumap(TaxumapMixin):
             fpx (str, optional): Filepath to the rel_abundances dataframe, if saved on disk. Defaults to None.
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
         """
-
         self.random_state = random_state
         # self._is_transformed = False
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
@@ -79,12 +63,13 @@ class Taxumap(TaxumapMixin):
             self.name = None
 
     def transform_self(self, scale=False, debug=False, distance_metric="braycurtis", **kwargs):
-        """If rel_abundances and taxonomy dataframes are available, will run the taxUMAP transformation.
+        """Run the taxUMAP transformation.
+
+        Requires rel_abundances and taxonomy dataframes.
 
         Args:
             debug (bool, optional): If True, self will be given X and Xagg variables (debug only). Defaults to False.
         """
-
         if ("neigh" not in kwargs) or (kwargs["neigh"] is None):
             warnings.warn(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
@@ -159,7 +144,7 @@ class Taxumap(TaxumapMixin):
 
     @property
     def df_dominant_taxon(self):
-
+        """Return the taxon with max abundance in sample."""
         # DataFrame where each row is the maximum taxon corresponding to the
         # shared index in the column index_column
         df_dom_tax_per_sample = (
@@ -188,7 +173,7 @@ class Taxumap(TaxumapMixin):
         return df_final
 
     def save_embedding(self, path=None):
-
+        """Write embedding to file."""
         if path is None:
             path = "taxumap_embedding.csv"
 
@@ -200,7 +185,7 @@ class Taxumap(TaxumapMixin):
         return self
 
     def scatter(self, figsize=(6, 4), save=False, outdir=None, **kwargs):
-
+        """Scatter plot."""
         if not self._is_transformed:
             raise AttributeError(
                 "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
