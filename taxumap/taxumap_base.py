@@ -16,14 +16,15 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from umap import UMAP
 
-from taxumap.tools import tax_agg, aggregate_at_taxlevel, scale
+from taxumap._taxumap import TaxumapMixin
+from taxumap.tools import tax_agg
 from taxumap.input_validation import validate_inputs
 
 mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams["ps.fonttype"] = 42
 
 
-class Taxumap():
+class Taxumap(TaxumapMixin):
     """Taxumap object for running TaxUMAP algorithm"""
     def __init__(
         self,
