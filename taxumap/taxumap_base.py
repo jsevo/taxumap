@@ -6,6 +6,7 @@ __copyright__ = "Copyright 2020, MIT License"
 
 import warnings
 import os
+
 # import logging
 
 import matplotlib as mpl
@@ -16,7 +17,6 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from umap import UMAP
 
-#from taxumap._taxumap import TaxumapMixin
 from taxumap.tools import tax_agg
 from taxumap.input_validation import validate_inputs
 
@@ -24,8 +24,9 @@ mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams["ps.fonttype"] = 42
 
 
-class Taxumap():
-    """Taxumap object for running TaxUMAP algorithm"""
+class Taxumap:
+    """Taxumap object for running TaxUMAP algorithm."""
+
     def __init__(
         self,
         agg_levels=["Phylum", "Family"],
@@ -53,7 +54,7 @@ class Taxumap():
         weights, microbiota_data, taxonomy = validate_inputs(
             weights, microbiota_data, taxonomy, agg_levels
         )
-        print('post validate inputs main', taxonomy)
+        print("post validate inputs main", taxonomy)
         self.weights = weights
         self.microbiota_data = microbiota_data
         self.taxonomy = taxonomy
@@ -64,7 +65,9 @@ class Taxumap():
         else:
             self.name = None
 
-    def transform_self(self, scale=False, debug=False, distance_metric="braycurtis", **kwargs):
+    def transform_self(
+        self, scale=False, debug=False, distance_metric="braycurtis", **kwargs
+    ):
         """Run the taxUMAP transformation.
 
         Requires microbiota_data and taxonomy dataframes.
@@ -76,7 +79,11 @@ class Taxumap():
             warnings.warn(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
-            neigh = 120 if len(self.microbiota_data) > 120 else len(self.microbiota_data) - 1
+            neigh = (
+                120
+                if len(self.microbiota_data) > 120
+                else len(self.microbiota_data) - 1
+            )
         else:
             neigh = kwargs["neigh"]
 
@@ -87,15 +94,19 @@ class Taxumap():
             min_dist = kwargs["min_dist"]
 
         if ("epochs" not in kwargs) or (kwargs["epochs"] is None):
-            epochs = 5000 if neigh < 120 else (1000 if len(self.microbiota_data) < 5000 else 1000)
+            epochs = (
+                5000
+                if neigh < 120
+                else (1000 if len(self.microbiota_data) < 5000 else 1000)
+            )
             warnings.warn("Setting epochs to %d" % epochs)
         else:
             epochs = kwargs["epochs"]
 
         if "low_precision" not in kwargs:
-            low_precision=False
+            low_precision = False
         else:
-            low_precision=np.float(kwargs["low_precision"])
+            low_precision = np.float(kwargs["low_precision"])
 
         # Shouldn't need `try...except` because any Taxumap object should have proper attributes
         Xagg = tax_agg(
@@ -104,7 +115,7 @@ class Taxumap():
             self.agg_levels,
             distance_metric,
             self.weights,
-            low_precision=low_precision
+            low_precision=low_precision,
         )
 
         rs = np.random.RandomState(seed=self.random_state)
@@ -150,7 +161,9 @@ class Taxumap():
         # DataFrame where each row is the maximum taxon corresponding to the
         # shared index in the column index_column
         df_dom_tax_per_sample = (
-            pd.DataFrame(self.microbiota_data.idxmax(axis="columns"), columns=["max_tax"])
+            pd.DataFrame(
+                self.microbiota_data.idxmax(axis="columns"), columns=["max_tax"]
+            )
             .reset_index()
             .set_index("max_tax")
         )
@@ -162,9 +175,13 @@ class Taxumap():
         )
 
         # all below here, I am cleaning the prelim_df_table for final return
-        tax_hierarchy = prelim_df_table.columns[prelim_df_table.columns != "index_column"]
+        tax_hierarchy = prelim_df_table.columns[
+            prelim_df_table.columns != "index_column"
+        ]
 
-        new_tax_hierarchy = ["dom_" + each_level.lower() for each_level in tax_hierarchy]
+        new_tax_hierarchy = [
+            "dom_" + each_level.lower() for each_level in tax_hierarchy
+        ]
 
         change_labels = dict(zip(tax_hierarchy, new_tax_hierarchy))
 
@@ -186,12 +203,18 @@ class Taxumap():
 
         return self
 
-    def scatter(self, figsize=(6, 4), save=False, outdir=None,
-                plotname="taxumap_scatterplot.pdf", **kwargs):
+    def scatter(
+        self,
+        figsize=(6, 4),
+        save=False,
+        outdir=None,
+        plotname="taxumap_scatterplot.pdf",
+        **kwargs,
+    ):
         """Scatter plot."""
         if not self._is_transformed:
             raise AttributeError(
-                "Your Taxumap has yet to be transformed. Run Taxumap.transform_self() first."
+                "Taxumap has yet to be transformed. Run Taxumap.transform_self"
             )
 
         fig, ax = plt.subplots(figsize=figsize)
@@ -202,8 +225,8 @@ class Taxumap():
             **kwargs,
         )
 
-        ax.set_xlabel('TaxUMAP-1')
-        ax.set_ylabel('TaxUMAP-2')
+        ax.set_xlabel("TaxUMAP-1")
+        ax.set_ylabel("TaxUMAP-2")
 
         ax.set_title(self.name)
 
@@ -216,4 +239,6 @@ class Taxumap():
         return f"Taxumap(agg_levels = {self.agg_levels}, weights = {self.weights})"
 
     def __str__(self):
-        return f"Taxumap with agg_levels = {self.agg_levels} and weights = {self.weights}."
+        return (
+            f"Taxumap with agg_levels = {self.agg_levels} and weights = {self.weights}."
+        )
