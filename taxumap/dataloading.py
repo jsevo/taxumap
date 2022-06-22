@@ -129,7 +129,7 @@ def parse_taxonomy_data(fp, idx_col=["ASV", "OTU"], idx_dtype=str):
 
 
 def check_if_compositional(X, name=""):
-    """Checks if all rows sum to 1."""
+    """Check if all rows sum to 1."""
     if not np.allclose(X.sum(axis=1), 1):
         warnings.warn(
             "Rows in the {} dataframe do not sum to 1. Is this intentional?".format(name)
@@ -137,13 +137,12 @@ def check_if_compositional(X, name=""):
 
 
 def check_tax_is_consistent(df):
-    """Checks if taxonomy tbl has nans, datatypes; warns if non str found."""
+    """Check if taxonomy tbl has nans, datatypes; warns if non str found."""
     if np.any(df.isna()):
         warnings.warn(
             "Missing values (NaN) found for some taxonomy levels, you should consider filling with higher taxonomic level names. Please consult the documentation for best way to move forward."
         )
-
-    # should we just read_csv() and only allow certain datatypes (i.e. str, obj?)
+    # should we just read_csv() & only allow certain datatypes (i.e. str, obj?)
     if any(df.dtypes == (int, float)):
         warnings.warn(
             "Your taxonomy table contains columns may contain numerical data. Please consult documentation because you may have incorrectly formatted your dataframe."

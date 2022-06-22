@@ -37,8 +37,8 @@ def tax_agg(rel_abundances, taxonomy, agg_levels, distance_metric, weights, low_
     _X = _X.loc[:, (_X != 0).any(axis=0)]
     if low_precision:
         _threshold = low_precision*_X.shape[0]
-        _Xs = _Xs.sum(axis=0)>_threshold
-        _X = _X.loc[:,_Xs.values]
+        _Xs = _X.sum(axis=0) > _threshold
+        _X = _X.loc[:, _Xs.values]
     # do a PCA first? memoize?
     Xdist = ssd.cdist(_X, _X, distance_metric)
     Xdist = pd.DataFrame(Xdist, index=_X.index, columns=_X.index)

@@ -13,6 +13,7 @@ def validate_weights(weights, agg_levels):
     else:
         if len(weights) != len(agg_levels):
             raise ValueError("The length of the weights must match that of agg_levels")
+    weights = weights.copy()
     return weights
 
 
@@ -33,6 +34,7 @@ def validate_microbiome_data_frame(microbiota_data):
         microbiota_data,
         name="locally-supplied microbiota (microbiota_data)",
     )
+    microbiota_data = microbiota_data.copy()
 
     return microbiota_data
 
@@ -264,13 +266,17 @@ def ensure_monophyletic_for_hct_dataset(taxonomy):
     return taxonomy
 
 def test_taxonomy_is_monophyletic(taxonomy):
-    for (p,c) in zip(taxonomy.columns[0:-1],taxonomy.columns[1::]):
-        gc = taxonomy[[p,c]].groupby(c).agg(lambda x: len(np.unique(x))<=1)
-        if np.all(gc.values):
-            pass
-        else:
-            print(p,c)
-            print('not monophyletic')
+    try:
+      for (p,c) in zip(taxonomy.columns[0:-1],taxonomy.columns[1::]):
+          gc = taxonomy[[p,c]].groupby(c).agg(lambda x: len(np.unique(x))<=1)
+          if np.all(gc.values):
+              pass
+          else:
+              print(p,c)
+              print('not monophyletic')
+    except:
+        print("Could not ensure monophyly")
+
     
 
 
@@ -280,9 +286,9 @@ def normalize_taxonomy(taxonomy):
     except:
         warnings.warn("taxonomy table gap filling failed")
     try:
-        taxonomy = ensure_monophyletic_for_hct_dataset(taxonomy)
+        ensure_monophyletic_for_hct_dataset(taxonomy)
     except:
-        warnings.warn("ensure_monophyletic_for_hct_dataset failed. likely not hct data set.") 
+        warnings.warn("ensure_monophyletic_for_hct_dataset failed. likely not hct data set.")
     return taxonomy
 
 
@@ -294,6 +300,7 @@ def validate_taxonomy(taxonomy):
                 "taxonomy is None. Provide a pd.DataFrame taxonomy table or path to a .csv"
             )
         elif isinstance(taxonomy, pd.DataFrame):
+            taxonomy = taxonomy.copy()
             taxonomy.columns = map(str.capitalize, taxonomy.columns)
             dataloading.check_tax_is_consistent(taxonomy)
         elif isinstance(taxonomy, str):
@@ -301,22 +308,21 @@ def validate_taxonomy(taxonomy):
     except:
         warnings.warn("Taxonomy validation failed")
     try:
-        normalize_taxonomy(taxonomy)
+        taxonomy = normalize_taxonomy(taxonomy)
+
     except:
         warnings.warn(
             "An exception occurred when harmonizing taxonomy date (filling gaps, testing if all monophyletic)"
         )
     try:
-        taxonomy = test_taxonomy_is_monophyletic(taxonomy)
+        test_taxonomy_is_monophyletic(taxonomy)
     except:
         warnings.warn("Review taxonomy table, it appears not to be monophyletic.")  
     return taxonomy
 
 
 def validate_inputs(weights, microbiota_data, taxonomy, agg_levels):
-
     weights = validate_weights(weights, agg_levels)
     microbiota_data = validate_microbiome_data(microbiota_data)
     taxonomy = validate_taxonomy(taxonomy)
-
     return (weights, microbiota_data, taxonomy)

@@ -16,7 +16,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from umap import UMAP
 
-from taxumap._taxumap import TaxumapMixin
+#from taxumap._taxumap import TaxumapMixin
 from taxumap.tools import tax_agg
 from taxumap.input_validation import validate_inputs
 
@@ -24,7 +24,7 @@ mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams["ps.fonttype"] = 42
 
 
-class Taxumap(TaxumapMixin):
+class Taxumap():
     """Taxumap object for running TaxUMAP algorithm"""
     def __init__(
         self,
@@ -47,12 +47,13 @@ class Taxumap(TaxumapMixin):
             name (str, optional): A useful name for the project. Used in graphing and saving methods. Defaults to None.
         """
         self.random_state = random_state
-        # self._is_transformed = False
+        self._is_transformed = False
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
         weights, microbiota_data, taxonomy = validate_inputs(
             weights, microbiota_data, taxonomy, agg_levels
         )
+        print('post validate inputs main', taxonomy)
         self.weights = weights
         self.microbiota_data = microbiota_data
         self.taxonomy = taxonomy
@@ -136,7 +137,7 @@ class Taxumap(TaxumapMixin):
         self.df_embedding = pd.DataFrame(
             self.embedding, columns=["taxumap1", "taxumap2"], index=self.index
         )
-        # self._is_transformed = True
+        self._is_transformed = True
 
         if debug:
             self.Xagg = Xagg
@@ -185,7 +186,8 @@ class Taxumap(TaxumapMixin):
 
         return self
 
-    def scatter(self, figsize=(6, 4), save=False, outdir=None, **kwargs):
+    def scatter(self, figsize=(6, 4), save=False, outdir=None,
+                plotname="taxumap_scatterplot.pdf", **kwargs):
         """Scatter plot."""
         if not self._is_transformed:
             raise AttributeError(
@@ -200,13 +202,13 @@ class Taxumap(TaxumapMixin):
             **kwargs,
         )
 
-        ax.set_xlabel(self.taxumap1)
-        ax.set_ylabel(self.taxumap2)
+        ax.set_xlabel('TaxUMAP-1')
+        ax.set_ylabel('TaxUMAP-2')
 
         ax.set_title(self.name)
 
         if save:
-            fig.savefig(os.path.join(outdir, self._plot_name))
+            fig.savefig(os.path.join(outdir, plotname))
 
         return fig, ax
 
