@@ -1,10 +1,11 @@
+#! /usr/bin/env python3
 # Authors: Jonas Schluter <jonas.schluter@nyulangone.org>, Grant Hussey <grant.hussey@nyulangone.org>
 # License: MIT
 import argparse
 import numpy as np
 import os
 import warnings
-import sys 
+import sys
 
 from taxumap.taxumap_base import Taxumap
 
