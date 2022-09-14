@@ -52,7 +52,7 @@ In the above tables, the ``''`` designates strings. **Any UNKNOWN taxonomic leve
 ### Command line:
 
 ```bash
-python taxumap/run_taxumap.py -t taxonomy.csv -m microbiota_table.csv
+run_taxumap.py -t examples/example_data/taxonomy.csv -m examples/example_data/microbiota_table.csv
 ```
 The embedding will be saved in the current working folder, or to a location with the `-o path/to/folder/` flag. Additionally, for best results, the flag `-n` should be folllowed by the number of unique patients in your dataset (see **Optional** flag information below for more details).
 
