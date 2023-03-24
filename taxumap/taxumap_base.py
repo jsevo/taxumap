@@ -52,8 +52,7 @@ class Taxumap:
         self.agg_levels = list(map(lambda x: x.capitalize(), agg_levels))
 
         weights, microbiota_data, taxonomy = validate_inputs(
-            weights, microbiota_data, taxonomy, agg_levels
-        )
+            weights, microbiota_data, taxonomy, agg_levels)
         print("post validate inputs main", taxonomy)
         self.weights = weights
         self.microbiota_data = microbiota_data
@@ -65,9 +64,11 @@ class Taxumap:
         else:
             self.name = None
 
-    def transform_self(
-        self, scale=False, debug=False, distance_metric="braycurtis", **kwargs
-    ):
+    def transform_self(self,
+                       scale=False,
+                       debug=False,
+                       distance_metric="braycurtis",
+                       **kwargs):
         """Run the taxUMAP transformation.
 
         Requires microbiota_data and taxonomy dataframes.
@@ -79,11 +80,8 @@ class Taxumap:
             warnings.warn(
                 "Please set neigh parameter to approx. the size of individals in the dataset. See documentation."
             )
-            neigh = (
-                120
-                if len(self.microbiota_data) > 120
-                else len(self.microbiota_data) - 1
-            )
+            neigh = (120 if len(self.microbiota_data) > 120 else
+                     len(self.microbiota_data) - 1)
         else:
             neigh = kwargs["neigh"]
 
@@ -94,11 +92,8 @@ class Taxumap:
             min_dist = kwargs["min_dist"]
 
         if ("epochs" not in kwargs) or (kwargs["epochs"] is None):
-            epochs = (
-                5000
-                if neigh < 120
-                else (1000 if len(self.microbiota_data) < 5000 else 1000)
-            )
+            epochs = (5000 if neigh < 120 else
+                      (1000 if len(self.microbiota_data) < 5000 else 1000))
             warnings.warn("Setting epochs to %d" % epochs)
         else:
             epochs = kwargs["epochs"]
@@ -145,9 +140,9 @@ class Taxumap:
         # raw data sample index as taxumap property
         self.index = Xagg.index
         # fit embedding as data frame
-        self.df_embedding = pd.DataFrame(
-            self.embedding, columns=["taxumap1", "taxumap2"], index=self.index
-        )
+        self.df_embedding = pd.DataFrame(self.embedding,
+                                         columns=["taxumap1", "taxumap2"],
+                                         index=self.index)
         self._is_transformed = True
 
         if debug:
@@ -160,24 +155,19 @@ class Taxumap:
         """Return the taxon with max abundance in sample."""
         # DataFrame where each row is the maximum taxon corresponding to the
         # shared index in the column index_column
-        df_dom_tax_per_sample = (
-            pd.DataFrame(
-                self.microbiota_data.idxmax(axis="columns"), columns=["max_tax"]
-            )
-            .reset_index()
-            .set_index("max_tax")
-        )
+        df_dom_tax_per_sample = (pd.DataFrame(
+            self.microbiota_data.idxmax(axis="columns"),
+            columns=["max_tax"]).reset_index().set_index("max_tax"))
 
         # This is where a merge is done to add in the full taxonomical
         # data for each of the "max_tax" dominant taxon
-        prelim_df_table = df_dom_tax_per_sample.merge(
-            self.taxonomy, right_index=True, left_index=True
-        )
+        prelim_df_table = df_dom_tax_per_sample.merge(self.taxonomy,
+                                                      right_index=True,
+                                                      left_index=True)
 
         # all below here, I am cleaning the prelim_df_table for final return
         tax_hierarchy = prelim_df_table.columns[
-            prelim_df_table.columns != "index_column"
-        ]
+            prelim_df_table.columns != "index_column"]
 
         new_tax_hierarchy = [
             "dom_" + each_level.lower() for each_level in tax_hierarchy

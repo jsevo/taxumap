@@ -127,6 +127,14 @@ Dataset
 
 For convenience, we are providing in the `taxumap/examples/example_data` directory a pre-cleaned version of this dataset, as allowed under the `CC BY 4.0` license. An accompanying Jupyter Notebook is provided to demonstrated how the data was cleaned.
 
+### generated summary
+
+This code defines a class called `Taxumap`, which is used for running the taxUMAP algorithm. The class constructor takes several arguments, including `agg_levels`, `weights`, `microbiota_data`, `taxonomy`, `name`, and `random_state`. These arguments are used to initialize attributes of the `Taxumap` object.
+
+Some of the methods of the `Taxumap` class include `transform_self()`, `scatter()`, `save_embedding()`, and `df_dominant_taxon()`. These methods are used to perform the taxUMAP transformation, generate a scatter plot of the transformed data, save the embedding to a file, and get the dominant taxonomic group based on the maximum abundance in each sample, respectively.
+
+Overall, this code provides a framework for running the taxUMAP algorithm and visualizing the results.
+
 
 
 ## License
