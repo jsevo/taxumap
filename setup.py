@@ -28,5 +28,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    scripts=['run_taxumap.py'],
     zip_safe=False,
 )
